@@ -1,0 +1,75 @@
+from django.conf import settings
+from django.db import models
+
+
+class Item(models.Model):
+    class Condition(models.TextChoices):
+        LAYAK_MAKAN = "layak_makan", "Masih Layak Dimakan"
+        BYPRODUCT = "byproduct", "Byproduct"
+
+    class Status(models.TextChoices):
+        TERSEDIA = "tersedia", "Tersedia"
+        TERSEDIA_SEBAGIAN = "tersedia_sebagian", "Tersedia (sebagian)"
+        HABIS = "habis", "Habis"
+        SELESAI = "selesai", "Selesai"
+        KADALUARSA = "kadaluarsa", "Kadaluarsa"
+
+    UNIT_CHOICES = [
+        ("kg", "Kilogram"),
+        ("liter", "Liter"),
+        ("pcs", "Pcs"),
+        ("bungkus", "Bungkus"),
+        ("porsi", "Porsi"),
+    ]
+
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="items"
+    )
+
+    name = models.CharField("Nama Item", max_length=150)
+    condition = models.CharField(max_length=20, choices=Condition.choices)
+    quantity_total = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity_remaining = models.DecimalField(max_digits=10, decimal_places=2)
+    unit = models.CharField(max_length=20, choices=UNIT_CHOICES)
+    description = models.TextField("Deskripsi", blank=True)
+
+    category = models.CharField("Kategori", max_length=100, blank=True)
+    pickup_start = models.TimeField("Jam Ambil Mulai")
+    pickup_end = models.TimeField("Jam Ambil Selesai")
+    price_original = models.PositiveIntegerField("Harga Asli", null=True, blank=True)
+    price_sale = models.PositiveIntegerField("Harga Jual", null=True, blank=True)
+    best_before = models.DateField("Baik Dikonsumsi Sebelum", null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TERSEDIA)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_condition_display()})"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.quantity_remaining is None:
+            self.quantity_remaining = self.quantity_total
+        super().save(*args, **kwargs)
+
+    def apply_claim(self, jumlah_klaim):
+        """Validasi + kurangi stok saat ada klaim. Raise ValueError kalau melebihi sisa."""
+        if jumlah_klaim <= 0:
+            raise ValueError("Jumlah klaim harus lebih dari 0")
+        if jumlah_klaim > self.quantity_remaining:
+            raise ValueError("Jumlah klaim melebihi sisa stok")
+        self.quantity_remaining -= jumlah_klaim
+        self.status = self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
+        self.save(update_fields=["quantity_remaining", "status", "updated_at"])
+
+
+class ItemImage(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="items/%Y/%m/")
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
