@@ -1,15 +1,6 @@
 from django.conf import settings
 from django.db import models
-
-
-class Location(models.Model):
-    nama_lengkap = models.CharField(max_length=255)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-
-    def __str__(self):
-        return self.nama_lengkap
-
+from locations.models import Location
 
 class Store(models.Model):
     owner = models.OneToOneField(
@@ -33,10 +24,11 @@ class Item(models.Model):
         DONASI = "donasi", "Donasi"
        
     class Status(models.TextChoices):
-        TERSEDIA = "tersedia", "Tersedia"
-        TERSEDIA_SEBAGIAN = "tersedia_sebagian", "Tersedia (sebagian)"
-        HABIS = "habis", "Habis"
-        KADALUARSA = "kadaluarsa", "Kadaluarsa"
+        TERSEDIA = 'Tersedia'
+        TERSEDIA_SEBAGIAN = 'Tersedia Sebagian'
+        HABIS = 'Habis'
+        SELESAI = 'Selesai'
+        KADALUARSA = 'Kadaluarsa'
 
     UNIT_CHOICES = [
         ("kg", "Kilogram"),
@@ -71,6 +63,7 @@ class Item(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TERSEDIA)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_reported = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
@@ -84,7 +77,6 @@ class Item(models.Model):
         super().save(*args, **kwargs)
 
     def apply_claim(self, jumlah_klaim):
-        """Dipanggil pas checkout dikonfirmasi (bukan cuma minat/lihat)."""
         if jumlah_klaim is None or jumlah_klaim <= 0:
             raise ValueError("Jumlah klaim harus lebih dari 0")
         if jumlah_klaim > self.quantity_remaining:
@@ -94,6 +86,7 @@ class Item(models.Model):
             self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
         )
         self.save(update_fields=["quantity_remaining", "status", "updated_at"])
+        pass
 
 
 class ItemImage(models.Model):
@@ -104,9 +97,15 @@ class ItemImage(models.Model):
     class Meta:
         ordering = ["order", "id"]
 
-
 class Klaim(models.Model):
-    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="klaim_list")
+    class StatusKlaim(models.TextChoices):
+        MENUNGGU = 'Menunggu'
+        SELESAI = 'Selesai'
+        BATAL = 'Batal'
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='klaim_list')
     peminat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     jumlah_diklaim = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=StatusKlaim.choices, default=StatusKlaim.MENUNGGU)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
