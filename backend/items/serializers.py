@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from .models import Item, ItemImage, Location, Store, Klaim
-
+from .models import Item, ItemImage, Store, Klaim
+from locations.models import Location
 
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,23 +54,29 @@ class ItemSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"price_sale": "Wajib diisi untuk listing jual diskon."}
                 )
-        elif condition == Item.Condition.BYPRODUCT:
-            data["listing_type"] = None  # paksa kosong, byproduct nggak butuh ini
+            elif condition == Item.Condition.BYPRODUCT:
+                data["listing_type"] = None  
 
         return data
 
     def create(self, validated_data):
         images_data = validated_data.pop("uploaded_images", [])
         validated_data["quantity_remaining"] = validated_data["quantity_total"]
+
+        if not hasattr(self.context["request"].user, 'store'):
+            raise serializers.ValidationError(
+                {"store": "Kamu belum setup Toko/Store."}
+            )
+            
         validated_data["store"] = self.context["request"].user.store
         item = Item.objects.create(**validated_data)
         for order, image_file in enumerate(images_data):
             ItemImage.objects.create(item=item, image=image_file, order=order)
         return item
 
-
-class KlaimSerializer(serializers.ModelSerializer):
+class KlaimManagementSerializer(serializers.ModelSerializer):
+    peminat_nama = serializers.CharField(source='peminat.username', read_only=True)
+    
     class Meta:
         model = Klaim
-        fields = ["id", "item", "peminat", "jumlah_diklaim", "created_at"]
-        read_only_fields = ["id", "peminat", "created_at"]
+        fields = ["id", "peminat", "peminat_nama", "jumlah_diklaim", "status", "created_at", "completed_at"]
