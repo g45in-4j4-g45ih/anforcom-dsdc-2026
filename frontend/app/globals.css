@@ -5,11 +5,24 @@
   color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
+
+  --primary: #e06c9f;
+  --primary-light: #f283b6;
+  --primary-soft: #edbfb7;
+  --secondary: #6e9887;
+  --secondary-light: #b5bfa1;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-light: var(--secondary-light);
+
   --font-mono: var(--font-geist-mono);
   --font-sans: var(--font-inter);
 }
