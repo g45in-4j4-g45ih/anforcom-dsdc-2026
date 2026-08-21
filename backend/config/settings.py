@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'items',
     'locations',
     'forum',
+    'reviews',
 ]
 
 MIDDLEWARE = [

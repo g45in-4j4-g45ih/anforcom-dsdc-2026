@@ -31,3 +31,60 @@ export async function createItem(formData: FormData, token: string) {
 
   return res.json();
 }
+
+export interface Rating {
+  id: number;
+  store: number;
+  rater: number;
+  rater_name: string;
+  score: number;
+  comment: string;
+  created_at: string;
+}
+
+export interface RatingSummary {
+  store: number;
+  average: number | null;
+  count: number;
+}
+
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  const firstFieldError = Object.values(body ?? {})[0];
+  if (Array.isArray(firstFieldError)) return String(firstFieldError[0]);
+  if (typeof firstFieldError === "string") return firstFieldError;
+  return body?.detail ?? fallback;
+}
+
+export async function fetchRatings(storeId: number): Promise<Rating[]> {
+  const res = await fetch(`${API_BASE_URL}/api/ratings/?store=${storeId}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchRatingSummary(storeId: number): Promise<RatingSummary> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/${storeId}/rating-summary/`);
+  if (!res.ok) return { store: storeId, average: null, count: 0 };
+  return res.json();
+}
+
+export async function submitRating(
+  storeId: number,
+  data: { score: number; comment: string },
+  token: string
+): Promise<Rating> {
+  const res = await fetch(`${API_BASE_URL}/api/ratings/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ store: storeId, score: data.score, comment: data.comment }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal mengirim ulasan. Coba lagi."));
+  }
+
+  return res.json();
+}
