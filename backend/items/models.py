@@ -1,5 +1,17 @@
 from django.conf import settings
 from django.db import models
+from locations.models import Location
+
+class Store(models.Model):
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="store"
+    )
+    nama_toko = models.CharField(max_length=150)
+    kontak_wa = models.CharField(max_length=20)
+    lokasi = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return self.nama_toko
 
 
 class Item(models.Model):
@@ -7,12 +19,16 @@ class Item(models.Model):
         LAYAK_MAKAN = "layak_makan", "Masih Layak Dimakan"
         BYPRODUCT = "byproduct", "Byproduct"
 
+    class ListingType(models.TextChoices):
+        DISKON = "diskon", "Jual Diskon"
+        DONASI = "donasi", "Donasi"
+       
     class Status(models.TextChoices):
-        TERSEDIA = "tersedia", "Tersedia"
-        TERSEDIA_SEBAGIAN = "tersedia_sebagian", "Tersedia (sebagian)"
-        HABIS = "habis", "Habis"
-        SELESAI = "selesai", "Selesai"
-        KADALUARSA = "kadaluarsa", "Kadaluarsa"
+        TERSEDIA = 'Tersedia'
+        TERSEDIA_SEBAGIAN = 'Tersedia Sebagian'
+        HABIS = 'Habis'
+        SELESAI = 'Selesai'
+        KADALUARSA = 'Kadaluarsa'
 
     UNIT_CHOICES = [
         ("kg", "Kilogram"),
@@ -22,20 +38,24 @@ class Item(models.Model):
         ("porsi", "Porsi"),
     ]
 
-    seller = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="items"
-    )
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="items")
 
     name = models.CharField("Nama Item", max_length=150)
     condition = models.CharField(max_length=20, choices=Condition.choices)
+    listing_type = models.CharField(
+        max_length=20, choices=ListingType.choices, null=True, blank=True
+    )  
     quantity_total = models.DecimalField(max_digits=10, decimal_places=2)
     quantity_remaining = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES)
     description = models.TextField("Deskripsi", blank=True)
-
     category = models.CharField("Kategori", max_length=100, blank=True)
-    pickup_start = models.TimeField("Jam Ambil Mulai")
-    pickup_end = models.TimeField("Jam Ambil Selesai")
+
+    pickup_start = models.TimeField(null=True, blank=True)
+    pickup_end = models.TimeField(null=True, blank=True)
+    pickup_date_start = models.DateField(null=True, blank=True)
+    pickup_date_end = models.DateField(null=True, blank=True)
+
     price_original = models.PositiveIntegerField("Harga Asli", null=True, blank=True)
     price_sale = models.PositiveIntegerField("Harga Jual", null=True, blank=True)
     best_before = models.DateField("Baik Dikonsumsi Sebelum", null=True, blank=True)
@@ -43,6 +63,7 @@ class Item(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TERSEDIA)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_reported = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
@@ -56,14 +77,16 @@ class Item(models.Model):
         super().save(*args, **kwargs)
 
     def apply_claim(self, jumlah_klaim):
-        """Validasi + kurangi stok saat ada klaim. Raise ValueError kalau melebihi sisa."""
-        if jumlah_klaim <= 0:
+        if jumlah_klaim is None or jumlah_klaim <= 0:
             raise ValueError("Jumlah klaim harus lebih dari 0")
         if jumlah_klaim > self.quantity_remaining:
             raise ValueError("Jumlah klaim melebihi sisa stok")
         self.quantity_remaining -= jumlah_klaim
-        self.status = self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
+        self.status = (
+            self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
+        )
         self.save(update_fields=["quantity_remaining", "status", "updated_at"])
+        pass
 
 
 class ItemImage(models.Model):
@@ -73,3 +96,16 @@ class ItemImage(models.Model):
 
     class Meta:
         ordering = ["order", "id"]
+
+class Klaim(models.Model):
+    class StatusKlaim(models.TextChoices):
+        MENUNGGU = 'Menunggu'
+        SELESAI = 'Selesai'
+        BATAL = 'Batal'
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='klaim_list')
+    peminat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    jumlah_diklaim = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=StatusKlaim.choices, default=StatusKlaim.MENUNGGU)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
