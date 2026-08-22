@@ -88,3 +88,48 @@ export async function submitRating(
 
   return res.json();
 }
+
+export interface ItemImageResponse {
+  id: number;
+  image: string;
+  order: number;
+}
+
+export interface ItemApiResponse {
+  id: number;
+  store: number;
+  store_detail: {
+    id: number;
+    nama_toko: string;
+    kontak_wa: string;
+    lokasi: number | null;
+    lokasi_detail: {
+      id: number;
+      nama_lengkap: string;
+      latitude: number | null;
+      longitude: number | null;
+    } | null;
+  } | null;
+  name: string;
+  condition: "layak_makan" | "byproduct";
+  listing_type: "diskon" | "donasi" | null;
+  quantity_total: string;
+  quantity_remaining: string;
+  unit: string;
+  description: string;
+  category: string;
+  pickup_start: string | null;
+  pickup_end: string | null;
+  price_original: number | null;
+  price_sale: number | null;
+  best_before: string | null;
+  status: string;
+  images: ItemImageResponse[];
+  created_at: string;
+}
+
+export async function getItem(id: string | number): Promise<ItemApiResponse | null> {
+  const res = await fetch(`${API_BASE_URL}/api/items/${id}/`, { cache: "no-store" });
+  if (!res.ok) return null;
+  return res.json();
+}
