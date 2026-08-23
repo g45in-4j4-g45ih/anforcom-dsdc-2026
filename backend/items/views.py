@@ -78,8 +78,11 @@ def tandai_selesai(request, klaim_id):
     if klaim.item.store.owner != request.user:
         return Response({"error": "Bukan item milikmu."}, status=status.HTTP_403_FORBIDDEN)
         
-    if klaim.status == Klaim.StatusKlaim.SELESAI:
-        return Response({"error": "Klaim sudah selesai."}, status=status.HTTP_400_BAD_REQUEST)
+    if klaim.status != Klaim.StatusKlaim.MENUNGGU:
+        return Response(
+            {"error": "Hanya klaim Menunggu yang dapat diselesaikan."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     klaim.status = Klaim.StatusKlaim.SELESAI
     klaim.completed_at = timezone.now()

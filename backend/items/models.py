@@ -77,16 +77,31 @@ class Item(models.Model):
         super().save(*args, **kwargs)
 
     def apply_claim(self, jumlah_klaim):
+        claimable_statuses = {
+            self.Status.TERSEDIA,
+            self.Status.TERSEDIA_SEBAGIAN,
+        }
+
+        if self.status not in claimable_statuses:
+            raise ValueError("Item tidak tersedia untuk diklaim.")
         if jumlah_klaim is None or jumlah_klaim <= 0:
             raise ValueError("Jumlah klaim harus lebih dari 0")
         if jumlah_klaim > self.quantity_remaining:
             raise ValueError("Jumlah klaim melebihi sisa stok")
+
         self.quantity_remaining -= jumlah_klaim
         self.status = (
-            self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
+            self.Status.HABIS
+            if self.quantity_remaining == 0
+            else self.Status.TERSEDIA_SEBAGIAN
         )
-        self.save(update_fields=["quantity_remaining", "status", "updated_at"])
-        pass
+        self.save(
+            update_fields=[
+                "quantity_remaining",
+                "status",
+                "updated_at",
+            ]
+        )
 
 
 class ItemImage(models.Model):
