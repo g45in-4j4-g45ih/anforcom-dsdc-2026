@@ -25,7 +25,7 @@ def location_search(request):
         "bounded": 0,
     }
     headers = {
-        "User-Agent": "AnforcomDSDC-CircularEconomyApp/1.0 (kontak: tim-anforcom@example.com)"
+        "User-Agent": "AnforcomDSDC-CircularEconomyApp/1.0 (kontak: namaraforcode@gmail.com)"
     }
 
     try:
