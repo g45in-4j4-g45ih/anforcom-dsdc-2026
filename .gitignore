@@ -1,8 +1,10 @@
 # Python / Django
+.venv/
+venv/
 backend/.venv/
-backend/__pycache__/
-backend/**/__pycache__/
-backend/*.pyc
+__pycache__/
+**/__pycache__/
+*.pyc
 backend/db.sqlite3
 backend/media/
 
@@ -10,24 +12,16 @@ backend/media/
 .env
 .env.*
 !.env.example
+frontend/.env.local
+
+# Next.js
+frontend/node_modules/
+frontend/.next/
 
 # OS / Editor
 .DS_Store
 Thumbs.db
 .vscode/
-# Python / Django
-.venv/
-__pycache__/
-*.pyc
-db.sqlite3
-media/
-venv/
 
-# Next.js
-frontend/node_modules/
-frontend/.next/
-frontend/.env.local
-
-# Umum
-.DS_Store
+# Logs
 *.log
