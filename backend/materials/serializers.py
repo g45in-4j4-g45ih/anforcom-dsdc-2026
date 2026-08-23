@@ -1,7 +1,11 @@
 from rest_framework import serializers
 
 from items.models import Item
-from items.serializers import ItemImageSerializer, LocationSerializer
+from items.serializers import (
+    ItemImageSerializer,
+    KlaimManagementSerializer,
+    LocationSerializer,
+)
 
 
 class MaterialSerializer(serializers.ModelSerializer):
@@ -41,4 +45,16 @@ class MaterialSerializer(serializers.ModelSerializer):
             "pickup_location",
             "created_at",
         ]
+        read_only_fields = fields
+
+
+class MaterialManagementSerializer(MaterialSerializer):
+    claims = KlaimManagementSerializer(
+        source="klaim_list",
+        many=True,
+        read_only=True,
+    )
+
+    class Meta(MaterialSerializer.Meta):
+        fields = [*MaterialSerializer.Meta.fields, "claims"]
         read_only_fields = fields

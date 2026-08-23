@@ -3,7 +3,10 @@ from rest_framework import generics, permissions
 
 from items.models import Item
 
-from .serializers import MaterialSerializer
+from .serializers import (
+    MaterialManagementSerializer,
+    MaterialSerializer,
+)
 
 
 class MaterialQuerysetMixin:
@@ -41,3 +44,19 @@ class MaterialListView(MaterialQuerysetMixin, generics.ListAPIView):
 
 class MaterialDetailView(MaterialQuerysetMixin, generics.RetrieveAPIView):
     pass
+
+
+class MaterialManagementListView(
+    MaterialQuerysetMixin,
+    generics.ListAPIView,
+):
+    serializer_class = MaterialManagementSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(store__owner=self.request.user)
+            .prefetch_related("klaim_list__peminat")
+        )
