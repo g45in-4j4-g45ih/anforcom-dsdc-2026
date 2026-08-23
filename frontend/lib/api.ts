@@ -15,6 +15,57 @@ export async function searchLocations(query: string): Promise<LocationResult[]> 
   return data.results ?? [];
 }
 
+export interface StoreLocation {
+  id: number;
+  alamat: string;
+  latitude: string | null;
+  longitude: string | null;
+}
+
+export interface StoreDetail {
+  id: number;
+  owner: number;
+  nama_toko: string;
+  kontak_wa: string;
+  lokasi: number | null;
+  lokasi_detail: StoreLocation | null;
+  description: string;
+  logo: string | null;
+}
+
+export interface ItemImageData {
+  id: number;
+  image: string;
+  order: number;
+}
+
+export interface ItemListing {
+  id: number;
+  name: string;
+  condition: "layak_makan" | "byproduct";
+  listing_type: "diskon" | "donasi" | null;
+  quantity_remaining: string;
+  unit: string;
+  price_original: number | null;
+  price_sale: number | null;
+  status: string;
+  images: ItemImageData[];
+  store_detail: StoreDetail;
+}
+
+export async function fetchStoreByOwner(userId: number | string): Promise<StoreDetail | null> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/?owner=${userId}`);
+  if (!res.ok) return null;
+  const data: StoreDetail[] = await res.json();
+  return data[0] ?? null;
+}
+
+export async function fetchStoreListings(storeId: number): Promise<ItemListing[]> {
+  const res = await fetch(`${API_BASE_URL}/api/items/?store=${storeId}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function createItem(formData: FormData, token: string) {
   const res = await fetch(`${API_BASE_URL}/api/items/`, {
     method: "POST",

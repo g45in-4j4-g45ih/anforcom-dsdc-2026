@@ -3,11 +3,47 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.parsers import FormParser, MultiPartParser
 
-from .models import Item, Klaim
-from .serializers import ItemSerializer
+from .models import Item, Klaim, Store
+from .serializers import ItemSerializer, StoreSerializer
+
+
+class StoreListCreateView(generics.ListCreateAPIView):
+    queryset = Store.objects.all()
+    serializer_class = StoreSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        owner_id = self.request.query_params.get("owner")
+        if owner_id:
+            qs = qs.filter(owner_id=owner_id)
+        return qs
+
+    def perform_create(self, serializer):
+        if hasattr(self.request.user, "store"):
+            raise ValidationError({"detail": "Kamu udah punya toko."})
+        serializer.save()
+
+
+class StoreDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = StoreSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return Store.objects.all()
+        return Store.objects.filter(owner=self.request.user)
+
 
 class ItemListCreateView(generics.ListCreateAPIView):
     queryset = Item.objects.all()

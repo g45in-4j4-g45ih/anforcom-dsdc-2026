@@ -259,3 +259,88 @@ class ItemClaimAPITests(APITestCase):
                     claim.status,
                     claim_status,
                 )
+
+
+class StoreAPITests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.owner = user_model.objects.create_user(username="toko-owner", password="test-password")
+        self.other_user = user_model.objects.create_user(username="other-user", password="test-password")
+
+        self.store = Store.objects.create(
+            owner=self.owner,
+            nama_toko="Toko Berkah",
+            kontak_wa="081234567890",
+        )
+
+    def test_store_list_is_public(self):
+        response = self.client.get(reverse("store-list-create"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_store_list_filters_by_owner(self):
+        response = self.client.get(reverse("store-list-create"), {"owner": self.other_user.id})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_create_store_requires_auth(self):
+        response = self.client.post(
+            reverse("store-list-create"),
+            {"nama_toko": "Toko Baru", "kontak_wa": "081200000000"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_authenticated_user_can_create_store(self):
+        self.client.force_authenticate(self.other_user)
+
+        response = self.client.post(
+            reverse("store-list-create"),
+            {"nama_toko": "Toko Baru", "kontak_wa": "081200000000"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Store.objects.count(), 2)
+
+    def test_user_cannot_create_a_second_store(self):
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.post(
+            reverse("store-list-create"),
+            {"nama_toko": "Toko Kedua", "kontak_wa": "081200000000"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Store.objects.count(), 1)
+
+    def test_owner_can_update_own_store(self):
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.patch(
+            reverse("store-detail", kwargs={"pk": self.store.pk}),
+            {"description": "Toko sayur dan buah segar"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.store.refresh_from_db()
+        self.assertEqual(self.store.description, "Toko sayur dan buah segar")
+
+    def test_non_owner_cannot_update_store(self):
+        self.client.force_authenticate(self.other_user)
+
+        response = self.client.patch(
+            reverse("store-detail", kwargs={"pk": self.store.pk}),
+            {"description": "Diubah paksa"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.store.refresh_from_db()
+        self.assertEqual(self.store.description, "")
+
+    def test_store_detail_is_public(self):
+        response = self.client.get(reverse("store-detail", kwargs={"pk": self.store.pk}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["nama_toko"], "Toko Berkah")
