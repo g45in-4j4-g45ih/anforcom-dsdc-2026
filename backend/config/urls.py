@@ -8,6 +8,7 @@ urlpatterns = [
     path('api/', include('items.urls')),
     path('api/', include('locations.urls')),
     path('api/', include('forum.urls')),
+    path('api/materials/', include('materials.urls')),
 ]
 
 if settings.DEBUG:
