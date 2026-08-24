@@ -33,6 +33,41 @@ def user_completed_claims(user):
     ).distinct()
 
 
+def filter_history_claims(claims, filters):
+    path = filters.get("path")
+    category = filters.get("category")
+    start_date = filters.get("start_date")
+    end_date = filters.get("end_date")
+
+    if path == "material_exchange":
+        claims = claims.filter(
+            item__condition=Item.Condition.BYPRODUCT,
+        )
+    elif path == "jual_diskon":
+        claims = claims.filter(
+            item__listing_type=Item.ListingType.DISKON,
+        ).exclude(
+            item__condition=Item.Condition.BYPRODUCT,
+        )
+    elif path == "donasi":
+        claims = claims.filter(
+            item__listing_type=Item.ListingType.DONASI,
+        ).exclude(
+            item__condition=Item.Condition.BYPRODUCT,
+        )
+
+    if category:
+        claims = claims.filter(item__category__iexact=category)
+
+    if start_date:
+        claims = claims.filter(completed_at__date__gte=start_date)
+
+    if end_date:
+        claims = claims.filter(completed_at__date__lte=end_date)
+
+    return claims
+
+
 def rescue_path(item):
     if item.condition == Item.Condition.BYPRODUCT:
         return "material_exchange"
@@ -106,3 +141,37 @@ def build_role_summary(claims, user):
             add_claim(by_role["claimer"], claim)
 
     return by_role
+
+
+def claim_roles(claim, user):
+    roles = []
+
+    if claim.item.store.owner_id == user.id:
+        roles.append("poster")
+
+    if claim.peminat_id == user.id:
+        roles.append("claimer")
+
+    return roles
+
+
+def build_impact_history(claims, user):
+    return [
+        {
+            "id": claim.id,
+            "item": {
+                "id": claim.item_id,
+                "name": claim.item.name,
+            },
+            "path": rescue_path(claim.item),
+            "category": (
+                claim.item.category.strip()
+                or "Tanpa Kategori"
+            ),
+            "quantity": claim.jumlah_diklaim,
+            "unit": claim.item.unit,
+            "roles": claim_roles(claim, user),
+            "completed_at": claim.completed_at,
+        }
+        for claim in claims
+    ]

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -289,4 +290,172 @@ class ImpactAPITests(APITestCase):
         self.assertEqual(
             response.data["by_role"]["claimer"]["total_transactions"],
             1,
+        )
+
+    def test_impact_history_requires_authentication(self):
+        response = self.client.get(reverse("impact-history"))
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_impact_history_only_returns_completed_user_transactions(self):
+        user_model = get_user_model()
+        other_owner = user_model.objects.create_user(
+            username="history-other-owner",
+            password="test-password",
+        )
+        other_store = Store.objects.create(
+            owner=other_owner,
+            nama_toko="Toko History Lain",
+            kontak_wa="087654321098",
+        )
+
+        poster_item = self.create_item(name="History Poster")
+        claimer_item = self.create_item(
+            store=other_store,
+            name="History Claimer",
+            unit="liter",
+        )
+        unrelated_item = self.create_item(
+            store=other_store,
+            name="History Pengguna Lain",
+        )
+
+        self.create_claim(
+            poster_item,
+            "2.00",
+            Klaim.StatusKlaim.SELESAI,
+        )
+        self.create_claim(
+            claimer_item,
+            "3.00",
+            Klaim.StatusKlaim.SELESAI,
+            claimer=self.owner,
+        )
+        self.create_claim(
+            unrelated_item,
+            "100.00",
+            Klaim.StatusKlaim.SELESAI,
+        )
+        self.create_claim(
+            poster_item,
+            "100.00",
+            Klaim.StatusKlaim.MENUNGGU,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse("impact-history"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
+
+        results = {
+            row["item"]["name"]: row
+            for row in response.data["results"]
+        }
+        self.assertEqual(
+            results["History Poster"]["roles"],
+            ["poster"],
+        )
+        self.assertEqual(
+            results["History Claimer"]["roles"],
+            ["claimer"],
+        )
+        self.assertNotIn("History Pengguna Lain", results)
+
+    def test_impact_history_filters_path_and_category(self):
+        self.seed_completed_claims()
+        self.client.force_authenticate(user=self.owner)
+
+        path_response = self.client.get(
+            reverse("impact-history"),
+            {"path": "material_exchange"},
+        )
+        category_response = self.client.get(
+            reverse("impact-history"),
+            {"category": "minuman"},
+        )
+
+        self.assertEqual(path_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(path_response.data["count"], 1)
+        self.assertEqual(
+            path_response.data["results"][0]["path"],
+            "material_exchange",
+        )
+
+        self.assertEqual(
+            category_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(category_response.data["count"], 1)
+        self.assertEqual(
+            category_response.data["results"][0]["category"],
+            "Minuman",
+        )
+
+    def test_impact_history_filters_period(self):
+        old_item = self.create_item(name="History Lama")
+        recent_item = self.create_item(name="History Baru")
+
+        old_claim = self.create_claim(
+            old_item,
+            "1.00",
+            Klaim.StatusKlaim.SELESAI,
+        )
+        recent_claim = self.create_claim(
+            recent_item,
+            "1.00",
+            Klaim.StatusKlaim.SELESAI,
+        )
+
+        Klaim.objects.filter(pk=old_claim.pk).update(
+            completed_at=timezone.now() - timedelta(days=30),
+        )
+        Klaim.objects.filter(pk=recent_claim.pk).update(
+            completed_at=timezone.now() - timedelta(days=2),
+        )
+
+        today = timezone.localdate()
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(
+            reverse("impact-history"),
+            {
+                "start_date": (
+                    today - timedelta(days=7)
+                ).isoformat(),
+                "end_date": today.isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(
+            response.data["results"][0]["item"]["name"],
+            "History Baru",
+        )
+
+    def test_impact_history_rejects_invalid_filters(self):
+        self.client.force_authenticate(user=self.owner)
+
+        invalid_path = self.client.get(
+            reverse("impact-history"),
+            {"path": "tidak_valid"},
+        )
+        reversed_period = self.client.get(
+            reverse("impact-history"),
+            {
+                "start_date": "2026-08-20",
+                "end_date": "2026-08-01",
+            },
+        )
+
+        self.assertEqual(
+            invalid_path.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            reversed_period.status_code,
+            status.HTTP_400_BAD_REQUEST,
         )
