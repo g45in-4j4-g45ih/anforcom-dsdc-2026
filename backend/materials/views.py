@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -16,6 +17,21 @@ class MaterialQuerysetMixin:
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
+        overdue_candidates = (
+            Item.objects.filter(
+                condition=Item.Condition.BYPRODUCT,
+                status__in=[
+                    Item.Status.TERSEDIA,
+                    Item.Status.TERSEDIA_SEBAGIAN,
+                ],
+                pickup_date_end__lte=timezone.localdate(),
+            )
+            .prefetch_related("klaim_list")
+        )
+
+        for material in overdue_candidates:
+            material.expire_if_overdue()
+
         queryset = (
             Item.objects.filter(condition=Item.Condition.BYPRODUCT)
             .select_related("store__owner", "store__lokasi")

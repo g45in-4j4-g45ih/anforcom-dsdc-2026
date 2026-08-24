@@ -1,7 +1,9 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -389,4 +391,82 @@ class MaterialReadAPITests(APITestCase):
         self.assertEqual(
             self.material.status,
             Item.Status.SELESAI,
+        )
+
+    def test_overdue_unclaimed_material_expires_when_listed(self):
+        overdue_material = self.create_item(
+            name="Material Kedaluwarsa",
+            pickup_date_end=timezone.localdate() - timedelta(days=1),
+        )
+
+        response = self.client.get(reverse("material-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        overdue_material.refresh_from_db()
+        self.assertEqual(
+            overdue_material.status,
+            Item.Status.KADALUARSA,
+        )
+
+        returned_material = next(
+            item
+            for item in response.data
+            if item["id"] == overdue_material.id
+        )
+        self.assertEqual(
+            returned_material["status"],
+            Item.Status.KADALUARSA,
+        )
+
+    def test_overdue_material_with_existing_claim_does_not_expire(self):
+        overdue_material = self.create_item(
+            name="Material Sudah Diklaim",
+            pickup_date_end=timezone.localdate() - timedelta(days=1),
+        )
+        Klaim.objects.create(
+            item=overdue_material,
+            peminat=self.owner,
+            jumlah_diklaim=Decimal("1.00"),
+        )
+
+        self.client.get(reverse("material-list"))
+
+        overdue_material.refresh_from_db()
+        self.assertEqual(
+            overdue_material.status,
+            Item.Status.TERSEDIA,
+        )
+
+    def test_overdue_material_cannot_be_claimed_directly(self):
+        user_model = get_user_model()
+        claimer = user_model.objects.create_user(
+            username="overdue-material-claimer",
+            password="test-password",
+        )
+        overdue_material = self.create_item(
+            name="Material Lewat Pickup",
+            pickup_date_end=timezone.localdate() - timedelta(days=1),
+        )
+        self.client.force_authenticate(user=claimer)
+
+        response = self.client.post(
+            reverse(
+                "item-checkout",
+                kwargs={"pk": overdue_material.pk},
+            ),
+            {"jumlah": "1.00"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        overdue_material.refresh_from_db()
+        self.assertEqual(
+            overdue_material.status,
+            Item.Status.KADALUARSA,
+        )
+        self.assertFalse(
+            Klaim.objects.filter(item=overdue_material).exists()
         )
