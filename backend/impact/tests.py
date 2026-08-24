@@ -9,7 +9,7 @@ from rest_framework.test import APITestCase
 from items.models import Item, Klaim, Store
 
 
-class ImpactDashboardAPITests(APITestCase):
+class ImpactAPITests(APITestCase):
     def setUp(self):
         user_model = get_user_model()
         self.owner = user_model.objects.create_user(
@@ -42,7 +42,13 @@ class ImpactDashboardAPITests(APITestCase):
         data.update(overrides)
         return Item.objects.create(**data)
 
-    def create_claim(self, item, quantity, claim_status):
+    def create_claim(
+        self,
+        item,
+        quantity,
+        claim_status,
+        claimer=None,
+    ):
         completed_at = (
             timezone.now()
             if claim_status == Klaim.StatusKlaim.SELESAI
@@ -50,7 +56,7 @@ class ImpactDashboardAPITests(APITestCase):
         )
         return Klaim.objects.create(
             item=item,
-            peminat=self.claimer,
+            peminat=claimer or self.claimer,
             jumlah_diklaim=Decimal(quantity),
             status=claim_status,
             completed_at=completed_at,
@@ -183,4 +189,104 @@ class ImpactDashboardAPITests(APITestCase):
         self.assertEqual(
             second_response.data["totals"]["total_transactions"],
             3,
+        )
+
+    def test_my_impact_requires_authentication(self):
+        response = self.client.get(reverse("my-impact"))
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_my_impact_returns_zero_state(self):
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.get(reverse("my-impact"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["totals"]["total_transactions"], 0)
+        self.assertEqual(
+            response.data["by_role"]["poster"]["total_transactions"],
+            0,
+        )
+        self.assertEqual(
+            response.data["by_role"]["claimer"]["total_transactions"],
+            0,
+        )
+
+    def test_my_impact_aggregates_poster_and_claimer_roles(self):
+        user_model = get_user_model()
+        other_owner = user_model.objects.create_user(
+            username="impact-other-owner",
+            password="test-password",
+        )
+        other_store = Store.objects.create(
+            owner=other_owner,
+            nama_toko="Toko Impact Lain",
+            kontak_wa="089876543210",
+        )
+
+        poster_item = self.create_item(
+            name="Kontribusi Poster",
+            unit="kg",
+            category="Makanan",
+        )
+        claimer_item = self.create_item(
+            store=other_store,
+            name="Kontribusi Claimer",
+            unit="liter",
+            category="Minuman",
+        )
+        unrelated_item = self.create_item(
+            store=other_store,
+            name="Transaksi Pengguna Lain",
+            unit="kg",
+        )
+
+        self.create_claim(
+            poster_item,
+            "2.00",
+            Klaim.StatusKlaim.SELESAI,
+        )
+        self.create_claim(
+            claimer_item,
+            "3.00",
+            Klaim.StatusKlaim.SELESAI,
+            claimer=self.owner,
+        )
+        self.create_claim(
+            unrelated_item,
+            "100.00",
+            Klaim.StatusKlaim.SELESAI,
+        )
+        self.create_claim(
+            poster_item,
+            "100.00",
+            Klaim.StatusKlaim.MENUNGGU,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse("my-impact"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["totals"]["total_transactions"],
+            2,
+        )
+        self.assertEqual(
+            Decimal(str(response.data["totals"]["total_kg"])),
+            Decimal("2.00"),
+        )
+        self.assertEqual(
+            Decimal(str(response.data["totals"]["total_liter"])),
+            Decimal("3.00"),
+        )
+        self.assertEqual(
+            response.data["by_role"]["poster"]["total_transactions"],
+            1,
+        )
+        self.assertEqual(
+            response.data["by_role"]["claimer"]["total_transactions"],
+            1,
         )

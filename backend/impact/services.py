@@ -1,6 +1,8 @@
 from collections import defaultdict
 from decimal import Decimal
 
+from django.db.models import Q
+
 from items.models import Item, Klaim
 
 
@@ -23,6 +25,12 @@ def completed_claims():
         )
         .order_by("-completed_at", "-id")
     )
+
+
+def user_completed_claims(user):
+    return completed_claims().filter(
+        Q(peminat=user) | Q(item__store__owner=user)
+    ).distinct()
 
 
 def rescue_path(item):
@@ -82,3 +90,19 @@ def build_impact_summary(claims):
         "by_path": by_path,
         "by_category": categories,
     }
+
+
+def build_role_summary(claims, user):
+    by_role = {
+        "poster": empty_measurement(),
+        "claimer": empty_measurement(),
+    }
+
+    for claim in claims:
+        if claim.item.store.owner_id == user.id:
+            add_claim(by_role["poster"], claim)
+
+        if claim.peminat_id == user.id:
+            add_claim(by_role["claimer"], claim)
+
+    return by_role
