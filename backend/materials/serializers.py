@@ -39,6 +39,7 @@ class MaterialSerializer(serializers.ModelSerializer):
             "pickup_date_start",
             "pickup_date_end",
             "status",
+            "is_reported",
             "images",
             "poster_name",
             "store_name",

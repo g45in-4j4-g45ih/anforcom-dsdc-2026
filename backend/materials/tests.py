@@ -162,3 +162,95 @@ class MaterialReadAPITests(APITestCase):
             returned_claim["jumlah_diklaim"],
             "2.00",
         )
+
+    def test_report_requires_authentication(self):
+        response = self.client.post(
+            reverse(
+                "material-report",
+                kwargs={"pk": self.material.pk},
+            )
+        )
+
+        self.assertIn(
+            response.status_code,
+            [
+                status.HTTP_401_UNAUTHORIZED,
+                status.HTTP_403_FORBIDDEN,
+            ],
+        )
+        self.material.refresh_from_db()
+        self.assertFalse(self.material.is_reported)
+
+    def test_user_can_report_material_idempotently(self):
+        user_model = get_user_model()
+        reporter = user_model.objects.create_user(
+            username="material-reporter",
+            password="test-password",
+        )
+        self.client.force_authenticate(user=reporter)
+        report_url = reverse(
+            "material-report",
+            kwargs={"pk": self.material.pk},
+        )
+
+        first_response = self.client.post(report_url)
+        second_response = self.client.post(report_url)
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.material.refresh_from_db()
+        self.assertTrue(self.material.is_reported)
+
+        detail_response = self.client.get(
+            reverse(
+                "material-detail",
+                kwargs={"pk": self.material.pk},
+            )
+        )
+        self.assertTrue(detail_response.data["is_reported"])
+
+    def test_owner_cannot_report_own_material(self):
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.post(
+            reverse(
+                "material-report",
+                kwargs={"pk": self.material.pk},
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.material.refresh_from_db()
+        self.assertFalse(self.material.is_reported)
+
+    def test_non_byproduct_cannot_be_reported_through_material_api(self):
+        user_model = get_user_model()
+        reporter = user_model.objects.create_user(
+            username="food-reporter",
+            password="test-password",
+        )
+        self.client.force_authenticate(user=reporter)
+
+        response = self.client.post(
+            reverse(
+                "material-report",
+                kwargs={"pk": self.food.pk},
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.food.refresh_from_db()
+        self.assertFalse(self.food.is_reported)

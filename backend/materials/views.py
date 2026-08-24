@@ -1,5 +1,7 @@
 from django.db.models import Q
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
 
 from items.models import Item
 
@@ -60,3 +62,39 @@ class MaterialManagementListView(
             .filter(store__owner=self.request.user)
             .prefetch_related("klaim_list__peminat")
         )
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def report_material(request, pk):
+    material = generics.get_object_or_404(
+        Item,
+        pk=pk,
+        condition=Item.Condition.BYPRODUCT,
+    )
+
+    if material.store.owner_id == request.user.id:
+        return Response(
+            {"error": "Kamu tidak dapat melaporkan material milik sendiri."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if material.is_reported:
+        return Response(
+            {
+                "message": "Material sudah pernah dilaporkan.",
+                "is_reported": True,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    material.is_reported = True
+    material.save(update_fields=["is_reported", "updated_at"])
+
+    return Response(
+        {
+            "message": "Material berhasil dilaporkan.",
+            "is_reported": True,
+        },
+        status=status.HTTP_200_OK,
+    )
