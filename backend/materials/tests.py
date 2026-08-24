@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from items.models import Item, Store
+from items.models import Item, Klaim, Store
 from locations.models import Location
 
 
@@ -101,3 +101,64 @@ class MaterialReadAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         returned_ids = {item["id"] for item in response.data}
         self.assertEqual(returned_ids, {matching_material.id})
+
+    def test_management_requires_authentication(self):
+        response = self.client.get(
+            reverse("material-management-list")
+        )
+
+        self.assertIn(
+            response.status_code,
+            [
+                status.HTTP_401_UNAUTHORIZED,
+                status.HTTP_403_FORBIDDEN,
+            ],
+        )
+
+    def test_management_only_returns_owned_materials_with_claims(self):
+        user_model = get_user_model()
+        claimer = user_model.objects.create_user(
+            username="material-claimer",
+            password="test-password",
+        )
+        other_owner = user_model.objects.create_user(
+            username="other-material-owner",
+            password="test-password",
+        )
+        other_store = Store.objects.create(
+            owner=other_owner,
+            nama_toko="Toko Lain",
+            kontak_wa="089876543210",
+            lokasi=self.location,
+        )
+        other_material = self.create_item(
+            store=other_store,
+            name="Material Milik User Lain",
+        )
+        claim = Klaim.objects.create(
+            item=self.material,
+            peminat=claimer,
+            jumlah_diklaim=Decimal("2.00"),
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(
+            reverse("material-management-list")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        returned_ids = {item["id"] for item in response.data}
+        self.assertEqual(returned_ids, {self.material.id})
+        self.assertNotIn(other_material.id, returned_ids)
+
+        returned_claim = response.data[0]["claims"][0]
+        self.assertEqual(returned_claim["id"], claim.id)
+        self.assertEqual(
+            returned_claim["peminat_nama"],
+            "material-claimer",
+        )
+        self.assertEqual(
+            returned_claim["jumlah_diklaim"],
+            "2.00",
+        )
