@@ -254,3 +254,139 @@ class MaterialReadAPITests(APITestCase):
         )
         self.food.refresh_from_db()
         self.assertFalse(self.food.is_reported)
+
+    def test_fully_claimed_material_becomes_completed(self):
+        user_model = get_user_model()
+        claimer = user_model.objects.create_user(
+            username="full-material-claimer",
+            password="test-password",
+        )
+
+        self.client.force_authenticate(user=claimer)
+        claim_response = self.client.post(
+            reverse(
+                "item-checkout",
+                kwargs={"pk": self.material.pk},
+            ),
+            {"jumlah": "10.00"},
+            format="json",
+        )
+        self.assertEqual(
+            claim_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        claim = Klaim.objects.get(item=self.material)
+        self.client.force_authenticate(user=self.owner)
+        completion_response = self.client.patch(
+            reverse(
+                "klaim-tandai-selesai",
+                kwargs={"klaim_id": claim.pk},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(
+            completion_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.material.refresh_from_db()
+        self.assertEqual(
+            self.material.status,
+            Item.Status.SELESAI,
+        )
+
+    def test_partially_available_material_remains_available(self):
+        user_model = get_user_model()
+        claimer = user_model.objects.create_user(
+            username="partial-material-claimer",
+            password="test-password",
+        )
+
+        self.client.force_authenticate(user=claimer)
+        self.client.post(
+            reverse(
+                "item-checkout",
+                kwargs={"pk": self.material.pk},
+            ),
+            {"jumlah": "2.00"},
+            format="json",
+        )
+
+        claim = Klaim.objects.get(item=self.material)
+        self.client.force_authenticate(user=self.owner)
+        self.client.patch(
+            reverse(
+                "klaim-tandai-selesai",
+                kwargs={"klaim_id": claim.pk},
+            ),
+            format="json",
+        )
+
+        self.material.refresh_from_db()
+        self.assertEqual(
+            self.material.status,
+            Item.Status.TERSEDIA_SEBAGIAN,
+        )
+        self.assertEqual(
+            self.material.quantity_remaining,
+            Decimal("8.00"),
+        )
+
+    def test_material_waits_until_all_claims_are_completed(self):
+        user_model = get_user_model()
+        first_claimer = user_model.objects.create_user(
+            username="first-material-claimer",
+            password="test-password",
+        )
+        second_claimer = user_model.objects.create_user(
+            username="second-material-claimer",
+            password="test-password",
+        )
+        checkout_url = reverse(
+            "item-checkout",
+            kwargs={"pk": self.material.pk},
+        )
+
+        self.client.force_authenticate(user=first_claimer)
+        self.client.post(
+            checkout_url,
+            {"jumlah": "4.00"},
+            format="json",
+        )
+        self.client.force_authenticate(user=second_claimer)
+        self.client.post(
+            checkout_url,
+            {"jumlah": "6.00"},
+            format="json",
+        )
+
+        first_claim, second_claim = Klaim.objects.filter(
+            item=self.material
+        ).order_by("id")
+
+        self.client.force_authenticate(user=self.owner)
+        self.client.patch(
+            reverse(
+                "klaim-tandai-selesai",
+                kwargs={"klaim_id": first_claim.pk},
+            ),
+            format="json",
+        )
+
+        self.material.refresh_from_db()
+        self.assertEqual(self.material.status, Item.Status.HABIS)
+
+        self.client.patch(
+            reverse(
+                "klaim-tandai-selesai",
+                kwargs={"klaim_id": second_claim.pk},
+            ),
+            format="json",
+        )
+
+        self.material.refresh_from_db()
+        self.assertEqual(
+            self.material.status,
+            Item.Status.SELESAI,
+        )
