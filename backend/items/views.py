@@ -87,5 +87,18 @@ def tandai_selesai(request, klaim_id):
     klaim.status = Klaim.StatusKlaim.SELESAI
     klaim.completed_at = timezone.now()
     klaim.save(update_fields=["status", "completed_at"])
+
+    item = klaim.item
+    all_claims_completed = not item.klaim_list.exclude(
+        status=Klaim.StatusKlaim.SELESAI
+    ).exists()
+
+    if (
+        item.condition == Item.Condition.BYPRODUCT
+        and item.quantity_remaining == 0
+        and all_claims_completed
+    ):
+        item.status = Item.Status.SELESAI
+        item.save(update_fields=["status", "updated_at"])
     
     return Response({"message": "Klaim ditandai selesai."})
