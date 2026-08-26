@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
+
 from locations.models import Location
 
 class Store(models.Model):
@@ -10,6 +10,7 @@ class Store(models.Model):
     nama_toko = models.CharField(max_length=150)
     kontak_wa = models.CharField(max_length=20)
     lokasi = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True)
+    qris_image = models.ImageField(upload_to="qris/", null=True, blank=True)
     description = models.TextField(blank=True)
     logo = models.ImageField(upload_to="stores/logos/%Y/%m/", null=True, blank=True)
 
@@ -25,13 +26,13 @@ class Item(models.Model):
     class ListingType(models.TextChoices):
         DISKON = "diskon", "Jual Diskon"
         DONASI = "donasi", "Donasi"
-       
+
     class Status(models.TextChoices):
-        TERSEDIA = 'Tersedia'
-        TERSEDIA_SEBAGIAN = 'Tersedia Sebagian'
-        HABIS = 'Habis'
-        SELESAI = 'Selesai'
-        KADALUARSA = 'Kadaluarsa'
+        TERSEDIA = "Tersedia"
+        TERSEDIA_SEBAGIAN = "Tersedia Sebagian"
+        HABIS = "Habis"
+        SELESAI = "Selesai"
+        KADALUARSA = "Kadaluarsa"
 
     UNIT_CHOICES = [
         ("kg", "Kilogram"),
@@ -47,7 +48,7 @@ class Item(models.Model):
     condition = models.CharField(max_length=20, choices=Condition.choices)
     listing_type = models.CharField(
         max_length=20, choices=ListingType.choices, null=True, blank=True
-    )  
+    )
     quantity_total = models.DecimalField(max_digits=10, decimal_places=2)
     quantity_remaining = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES)
@@ -78,26 +79,19 @@ class Item(models.Model):
         if self._state.adding and self.quantity_remaining is None:
             self.quantity_remaining = self.quantity_total
         super().save(*args, **kwargs)
-
+    
     def pickup_window_has_ended(self):
         if not self.pickup_date_end:
             return False
-
         today = timezone.localdate()
-
         if self.pickup_date_end < today:
             return True
         if self.pickup_date_end > today or not self.pickup_end:
             return False
-
         return self.pickup_end < timezone.localtime().time()
-
+ 
     def expire_if_overdue(self):
-        expirable_statuses = {
-            self.Status.TERSEDIA,
-            self.Status.TERSEDIA_SEBAGIAN,
-        }
-
+        expirable_statuses = {self.Status.TERSEDIA, self.Status.TERSEDIA_SEBAGIAN}
         if (
             self.condition != self.Condition.BYPRODUCT
             or self.status not in expirable_statuses
@@ -105,39 +99,40 @@ class Item(models.Model):
             or self.klaim_list.exists()
         ):
             return False
-
         self.status = self.Status.KADALUARSA
         self.save(update_fields=["status", "updated_at"])
         return True
-
+ 
     def apply_claim(self, jumlah_klaim):
         self.expire_if_overdue()
-
-        claimable_statuses = {
-            self.Status.TERSEDIA,
-            self.Status.TERSEDIA_SEBAGIAN,
-        }
-
+ 
+        claimable_statuses = {self.Status.TERSEDIA, self.Status.TERSEDIA_SEBAGIAN}
         if self.status not in claimable_statuses:
             raise ValueError("Item tidak tersedia untuk diklaim.")
         if jumlah_klaim is None or jumlah_klaim <= 0:
             raise ValueError("Jumlah klaim harus lebih dari 0")
         if jumlah_klaim > self.quantity_remaining:
             raise ValueError("Jumlah klaim melebihi sisa stok")
-
+ 
         self.quantity_remaining -= jumlah_klaim
         self.status = (
-            self.Status.HABIS
-            if self.quantity_remaining == 0
+            self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
+        )
+        self.save(update_fields=["quantity_remaining", "status", "updated_at"])
+ 
+    def release_claim(self, jumlah):
+        """Kembalikan stok — dipanggil pas Klaim dibatalkan sebelum dibayar."""
+        if jumlah is None or jumlah <= 0:
+            return
+        self.quantity_remaining += jumlah
+        if self.quantity_remaining >= self.quantity_total:
+            self.quantity_remaining = self.quantity_total
+        self.status = (
+            self.Status.TERSEDIA
+            if self.quantity_remaining == self.quantity_total
             else self.Status.TERSEDIA_SEBAGIAN
         )
-        self.save(
-            update_fields=[
-                "quantity_remaining",
-                "status",
-                "updated_at",
-            ]
-        )
+        self.save(update_fields=["quantity_remaining", "status", "updated_at"])
 
 
 class ItemImage(models.Model):
@@ -148,15 +143,50 @@ class ItemImage(models.Model):
     class Meta:
         ordering = ["order", "id"]
 
+
 class Klaim(models.Model):
     class StatusKlaim(models.TextChoices):
-        MENUNGGU = 'Menunggu'
-        SELESAI = 'Selesai'
-        BATAL = 'Batal'
+        MENUNGGU_PEMBAYARAN = "Menunggu Pembayaran"
+        DIBAYAR = "Dibayar"
+        SELESAI = "Selesai"
+        BATAL = "Batal"
 
-    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='klaim_list')
+    class PickupMethod(models.TextChoices):
+        SELF_PICKUP = "Self Pickup"
+        OJEK = "Ojek"
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="klaim_list")
     peminat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     jumlah_diklaim = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=StatusKlaim.choices, default=StatusKlaim.MENUNGGU)
+    status = models.CharField(
+        max_length=30, choices=StatusKlaim.choices, default=StatusKlaim.MENUNGGU_PEMBAYARAN
+    )
+
+    # Snapshot harga pas klaim dibuat — biar catatan transaksi nggak berubah
+    # kalau harga item di-edit penjual belakangan.
+    price_at_claim = models.PositiveIntegerField(null=True, blank=True)
+    total_price = models.PositiveIntegerField(default=0)  # (price_at_claim * jumlah) + shipping_cost
+
+    pickup_method = models.CharField(
+        max_length=20, choices=PickupMethod.choices, default=PickupMethod.SELF_PICKUP
+    )
+    pickup_time = models.TimeField(null=True, blank=True)
+
+    # Diisi kalau pickup_method = "Ojek"
+    address_text = models.CharField(max_length=255, blank=True)
+    address_lat = models.FloatField(null=True, blank=True)
+    address_lng = models.FloatField(null=True, blank=True)
+    shipping_cost = models.PositiveIntegerField(default=0)
+
+    notes = models.TextField(blank=True)
+
     completed_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.peminat} - {self.item.name} x{self.jumlah_diklaim}"
