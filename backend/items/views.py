@@ -3,11 +3,47 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.parsers import FormParser, MultiPartParser
 
-from .models import Item, Klaim
-from .serializers import ItemSerializer
+from .models import Item, Klaim, Store
+from .serializers import ItemSerializer, StoreSerializer
+
+
+class StoreListCreateView(generics.ListCreateAPIView):
+    queryset = Store.objects.all()
+    serializer_class = StoreSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        owner_id = self.request.query_params.get("owner")
+        if owner_id:
+            qs = qs.filter(owner_id=owner_id)
+        return qs
+
+    def perform_create(self, serializer):
+        if hasattr(self.request.user, "store"):
+            raise ValidationError({"detail": "Kamu udah punya toko."})
+        serializer.save()
+
+
+class StoreDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = StoreSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return Store.objects.all()
+        return Store.objects.filter(owner=self.request.user)
+
 
 class ItemListCreateView(generics.ListCreateAPIView):
     queryset = Item.objects.all()
@@ -78,11 +114,27 @@ def tandai_selesai(request, klaim_id):
     if klaim.item.store.owner != request.user:
         return Response({"error": "Bukan item milikmu."}, status=status.HTTP_403_FORBIDDEN)
         
-    if klaim.status == Klaim.StatusKlaim.SELESAI:
-        return Response({"error": "Klaim sudah selesai."}, status=status.HTTP_400_BAD_REQUEST)
+    if klaim.status != Klaim.StatusKlaim.MENUNGGU:
+        return Response(
+            {"error": "Hanya klaim Menunggu yang dapat diselesaikan."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     klaim.status = Klaim.StatusKlaim.SELESAI
     klaim.completed_at = timezone.now()
     klaim.save(update_fields=["status", "completed_at"])
+
+    item = klaim.item
+    all_claims_completed = not item.klaim_list.exclude(
+        status=Klaim.StatusKlaim.SELESAI
+    ).exists()
+
+    if (
+        item.condition == Item.Condition.BYPRODUCT
+        and item.quantity_remaining == 0
+        and all_claims_completed
+    ):
+        item.status = Item.Status.SELESAI
+        item.save(update_fields=["status", "updated_at"])
     
     return Response({"message": "Klaim ditandai selesai."})

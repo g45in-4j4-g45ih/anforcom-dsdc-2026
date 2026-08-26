@@ -14,7 +14,21 @@ class StoreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Store
-        fields = ["id", "nama_toko", "kontak_wa", "lokasi", "lokasi_detail"]
+        fields = [
+            "id", "owner", "nama_toko", "kontak_wa",
+            "lokasi", "lokasi_detail", "description", "logo",
+        ]
+        read_only_fields = ["id", "owner"]
+
+    def validate_logo(self, logo):
+        max_size = 5 * 1024 * 1024
+        if logo and logo.size > max_size:
+            raise serializers.ValidationError("Ukuran logo maksimal 5MB.")
+        return logo
+
+    def create(self, validated_data):
+        validated_data["owner"] = self.context["request"].user
+        return Store.objects.create(**validated_data)
 
 
 class ItemImageSerializer(serializers.ModelSerializer):
@@ -50,12 +64,15 @@ class ItemSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"listing_type": "Wajib pilih Jual Diskon atau Donasi."}
                 )
-            if listing_type == Item.ListingType.DISKON and not data.get("price_sale"):
+            if (
+                listing_type == Item.ListingType.DISKON
+                and not data.get("price_sale")
+            ):
                 raise serializers.ValidationError(
                     {"price_sale": "Wajib diisi untuk listing jual diskon."}
                 )
-            elif condition == Item.Condition.BYPRODUCT:
-                data["listing_type"] = None  
+        elif condition == Item.Condition.BYPRODUCT:
+            data["listing_type"] = None
 
         return data
 
