@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { fetchStoreByOwner, fetchStoreListings, ItemListing, StoreDetail } from "@/lib/api";
 import ListingCard from "./listing/ListingCard";
@@ -64,12 +65,18 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
             store.nama_toko.charAt(0).toUpperCase()
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold text-gray-900">{store.nama_toko}</h1>
           {store.lokasi_detail?.alamat && (
             <p className="truncate text-sm text-gray-500">{store.lokasi_detail.alamat}</p>
           )}
         </div>
+        <Link
+          href={`/store/${userId}/edit`}
+          className="shrink-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Edit Toko
+        </Link>
       </div>
 
       {store.description && (

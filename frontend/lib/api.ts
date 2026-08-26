@@ -139,3 +139,51 @@ export async function submitRating(
 
   return res.json();
 }
+
+export async function createLocation(
+  data: { alamat: string; latitude?: number | null; longitude?: number | null },
+  token: string
+): Promise<StoreLocation> {
+  const res = await fetch(`${API_BASE_URL}/api/locations/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal menyimpan lokasi."));
+  }
+
+  return res.json();
+}
+
+export async function createStore(formData: FormData, token: string): Promise<StoreDetail> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/`, {
+    method: "POST",
+    headers: { Authorization: `Token ${token}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal membuat toko. Coba cek lagi isian form."));
+  }
+
+  return res.json();
+}
+
+export async function updateStore(storeId: number, formData: FormData, token: string): Promise<StoreDetail> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/${storeId}/`, {
+    method: "PATCH",
+    headers: { Authorization: `Token ${token}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal memperbarui toko. Coba cek lagi isian form."));
+  }
+
+  return res.json();
+}
