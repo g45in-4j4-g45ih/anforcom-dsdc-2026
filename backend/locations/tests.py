@@ -17,7 +17,9 @@ class LocationCreateAPITests(APITestCase):
             {"alamat": "Jl. Pandanaran, Semarang", "latitude": "-6.9833", "longitude": "110.4167"},
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # 401, not 403 - TokenAuthentication is configured project-wide now,
+        # so DRF challenges the request instead of just forbidding it
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_authenticated_user_can_create_location(self):
         self.client.force_authenticate(self.user)

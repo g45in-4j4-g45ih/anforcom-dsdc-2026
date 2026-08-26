@@ -15,6 +15,57 @@ export async function searchLocations(query: string): Promise<LocationResult[]> 
   return data.results ?? [];
 }
 
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  const firstFieldError = Object.values(body ?? {})[0];
+  if (Array.isArray(firstFieldError)) return String(firstFieldError[0]);
+  if (typeof firstFieldError === "string") return firstFieldError;
+  return body?.detail ?? fallback;
+}
+
+export async function registerAccount(data: {
+  username: string;
+  password: string;
+  email?: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/register/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal mendaftar. Coba lagi."));
+  }
+
+  return res.json();
+}
+
+export async function loginAccount(data: { username: string; password: string }): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Username atau password salah."));
+  }
+
+  return res.json();
+}
+
 export interface StoreLocation {
   id: number;
   alamat: string;
@@ -99,14 +150,6 @@ export interface RatingSummary {
   count: number;
 }
 
-async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
-  const body = await res.json().catch(() => ({}));
-  const firstFieldError = Object.values(body ?? {})[0];
-  if (Array.isArray(firstFieldError)) return String(firstFieldError[0]);
-  if (typeof firstFieldError === "string") return firstFieldError;
-  return body?.detail ?? fallback;
-}
-
 export async function fetchRatings(storeId: number): Promise<Rating[]> {
   const res = await fetch(`${API_BASE_URL}/api/ratings/?store=${storeId}`);
   if (!res.ok) return [];
@@ -182,6 +225,9 @@ export interface ItemApiResponse {
 export async function getItem(id: string | number): Promise<ItemApiResponse | null> {
   const res = await fetch(`${API_BASE_URL}/api/items/${id}/`, { cache: "no-store" });
   if (!res.ok) return null;
+  return res.json();
+}
+
 export async function createLocation(
   data: { alamat: string; latitude?: number | null; longitude?: number | null },
   token: string
