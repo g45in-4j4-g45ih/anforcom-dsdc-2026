@@ -30,9 +30,9 @@ class RatingAPITests(APITestCase):
             {"store": self.store.id, "score": 4, "comment": "Bagus"},
         )
 
-        # 403, not 401 — no DEFAULT_AUTHENTICATION_CLASSES is configured project-wide yet,
-        # so DRF has no scheme to challenge with and falls back to plain "forbidden"
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # 401, not 403 - TokenAuthentication is configured project-wide now,
+        # so DRF challenges the request instead of just forbidding it
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_authenticated_user_can_rate_store(self):
         self.client.force_authenticate(self.rater)
