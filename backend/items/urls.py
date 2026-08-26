@@ -9,6 +9,8 @@ from .views import (
     checkout_item,
     mark_klaim_paid,
     tandai_selesai,
+    StoreListCreateView,
+    StoreDetailView,
 )
 
 urlpatterns = [

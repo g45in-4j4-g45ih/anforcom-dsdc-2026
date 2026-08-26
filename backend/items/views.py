@@ -9,8 +9,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import FormParser, MultiPartParser
 
 from .models import Item, Klaim, Store
-from .serializers import CheckoutInputSerializer, ItemSerializer, KlaimManagementSerializer, ItemSerializer, StoreSerializer
-
+from .serializers import CheckoutInputSerializer, ItemSerializer, KlaimManagementSerializer, StoreSerializer
 
 class StoreListCreateView(generics.ListCreateAPIView):
     queryset = Store.objects.all()
