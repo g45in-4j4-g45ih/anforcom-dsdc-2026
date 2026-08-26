@@ -195,9 +195,11 @@ class ImpactAPITests(APITestCase):
     def test_my_impact_requires_authentication(self):
         response = self.client.get(reverse("my-impact"))
 
+        # 401, not 403 - now that TokenAuthentication is configured project-wide,
+        # DRF challenges the request instead of just forbidding it
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_my_impact_returns_zero_state(self):
@@ -295,9 +297,11 @@ class ImpactAPITests(APITestCase):
     def test_impact_history_requires_authentication(self):
         response = self.client.get(reverse("impact-history"))
 
+        # 401, not 403 - now that TokenAuthentication is configured project-wide,
+        # DRF challenges the request instead of just forbidding it
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_impact_history_only_returns_completed_user_transactions(self):
