@@ -11,6 +11,8 @@ class Store(models.Model):
     kontak_wa = models.CharField(max_length=20)
     lokasi = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True)
     qris_image = models.ImageField(upload_to="qris/", null=True, blank=True)
+    description = models.TextField(blank=True)
+    logo = models.ImageField(upload_to="stores/logos/%Y/%m/", null=True, blank=True)
 
     def __str__(self):
         return self.nama_toko
@@ -77,18 +79,47 @@ class Item(models.Model):
         if self._state.adding and self.quantity_remaining is None:
             self.quantity_remaining = self.quantity_total
         super().save(*args, **kwargs)
-
+    
+    def pickup_window_has_ended(self):
+        if not self.pickup_date_end:
+            return False
+        today = timezone.localdate()
+        if self.pickup_date_end < today:
+            return True
+        if self.pickup_date_end > today or not self.pickup_end:
+            return False
+        return self.pickup_end < timezone.localtime().time()
+ 
+    def expire_if_overdue(self):
+        expirable_statuses = {self.Status.TERSEDIA, self.Status.TERSEDIA_SEBAGIAN}
+        if (
+            self.condition != self.Condition.BYPRODUCT
+            or self.status not in expirable_statuses
+            or not self.pickup_window_has_ended()
+            or self.klaim_list.exists()
+        ):
+            return False
+        self.status = self.Status.KADALUARSA
+        self.save(update_fields=["status", "updated_at"])
+        return True
+ 
     def apply_claim(self, jumlah_klaim):
+        self.expire_if_overdue()
+ 
+        claimable_statuses = {self.Status.TERSEDIA, self.Status.TERSEDIA_SEBAGIAN}
+        if self.status not in claimable_statuses:
+            raise ValueError("Item tidak tersedia untuk diklaim.")
         if jumlah_klaim is None or jumlah_klaim <= 0:
             raise ValueError("Jumlah klaim harus lebih dari 0")
         if jumlah_klaim > self.quantity_remaining:
             raise ValueError("Jumlah klaim melebihi sisa stok")
+ 
         self.quantity_remaining -= jumlah_klaim
         self.status = (
             self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
         )
         self.save(update_fields=["quantity_remaining", "status", "updated_at"])
-
+ 
     def release_claim(self, jumlah):
         """Kembalikan stok — dipanggil pas Klaim dibatalkan sebelum dibayar."""
         if jumlah is None or jumlah <= 0:

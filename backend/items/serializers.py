@@ -15,7 +15,21 @@ class StoreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Store
-        fields = ["id", "nama_toko", "kontak_wa", "lokasi", "lokasi_detail", "qris_image"]
+        fields = [
+            "id", "owner", "nama_toko", "kontak_wa",
+            "lokasi", "lokasi_detail", "description", "logo", "qris_image"
+        ]
+        read_only_fields = ["id", "owner"]
+
+    def validate_logo(self, logo):
+        max_size = 5 * 1024 * 1024
+        if logo and logo.size > max_size:
+            raise serializers.ValidationError("Ukuran logo maksimal 5MB.")
+        return logo
+
+    def create(self, validated_data):
+        validated_data["owner"] = self.context["request"].user
+        return Store.objects.create(**validated_data)
 
 
 class ItemImageSerializer(serializers.ModelSerializer):
@@ -56,9 +70,6 @@ class ItemSerializer(serializers.ModelSerializer):
                     {"price_sale": "Wajib diisi untuk listing jual diskon."}
                 )
         elif condition == Item.Condition.BYPRODUCT:
-            # PENTING: baris ini sebelumnya ke-nest di dalam blok "if LAYAK_MAKAN" di atas
-            # (elif-nya nempel ke if listing_type == DISKON, bukan ke if condition == LAYAK_MAKAN),
-            # jadi listing_type item byproduct nggak pernah ke-null-in. Dipindah ke sini biar bener.
             data["listing_type"] = None
 
         return data
