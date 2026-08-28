@@ -6,6 +6,7 @@ import {
 
 import FilterDropdown from "@/components/materials/FilterDropdown";
 import MaterialCard from "@/components/materials/MaterialCard";
+import MaterialsHero from "@/components/materials/MaterialsHero";
 import MaterialsPagination from "@/components/materials/MaterialsPagination";
 import Navbar from "@/components/navigation/Navbar";
 import { getMaterials } from "@/lib/materials-api";
@@ -114,20 +115,7 @@ export default async function MaterialsPage({
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-wider text-secondary">
-            Material Exchange
-          </p>
-
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Temukan material yang bisa digunakan kembali
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-gray-600 sm:text-base">
-            Klaim byproduct dari pelaku usaha dan bantu material tersebut
-            memperoleh kegunaan baru.
-          </p>
-        </div>
+        <MaterialsHero />
 
         <form
           action="/materials"
@@ -170,7 +158,10 @@ export default async function MaterialsPage({
           </button>
         </form>
 
-        <div className="mt-8 flex items-center justify-between gap-4">
+        <div
+          id="material-list"
+          className="mt-8 scroll-mt-24 flex items-center justify-between gap-4"
+        >
           <div>
             <h2 className="font-semibold text-gray-900">
               Material tersedia
