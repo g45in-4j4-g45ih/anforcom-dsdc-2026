@@ -6,6 +6,7 @@ import {
 
 import FilterDropdown from "@/components/materials/FilterDropdown";
 import MaterialCard from "@/components/materials/MaterialCard";
+import MaterialsPagination from "@/components/materials/MaterialsPagination";
 import Navbar from "@/components/navigation/Navbar";
 import { getMaterials } from "@/lib/materials-api";
 import type {
@@ -14,6 +15,7 @@ import type {
 } from "@/types/materials";
 
 export const dynamic = "force-dynamic";
+const MATERIALS_PER_PAGE = 12;
 
 const CATEGORY_OPTIONS = [
   "Kulit Bawang",
@@ -54,6 +56,12 @@ function getParam(
   return typeof value === "string" ? value : "";
 }
 
+function getPage(value: string) {
+  const page = Number.parseInt(value, 10);
+
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
 function isAvailable(material: Material) {
   return (
     material.status === "Tersedia" ||
@@ -68,6 +76,7 @@ export default async function MaterialsPage({
   const search = getParam(params.search).trim();
   const category = getParam(params.category);
   const status = getParam(params.status) as MaterialStatus | "";
+  const requestedPage = getPage(getParam(params.page));
 
   let materials: Material[] = [];
   let errorMessage: string | null = null;
@@ -86,6 +95,19 @@ export default async function MaterialsPage({
         ? error.message
         : "Material belum dapat dimuat.";
   }
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(materials.length / MATERIALS_PER_PAGE),
+  );
+
+  const currentPage = Math.min(requestedPage, totalPages);
+  const pageStart =
+    (currentPage - 1) * MATERIALS_PER_PAGE;
+  const paginatedMaterials = materials.slice(
+    pageStart,
+    pageStart + MATERIALS_PER_PAGE,
+  );
 
   return (
     <div className="min-h-screen bg-[#f8f6f1]">
@@ -200,14 +222,24 @@ export default async function MaterialsPage({
             </p>
           </div>
         ) : (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {materials.map((material) => (
-              <MaterialCard
-                key={material.id}
-                material={material}
-              />
-            ))}
-          </div>
+          <>
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+              {paginatedMaterials.map((material) => (
+                <MaterialCard
+                  key={material.id}
+                  material={material}
+                />
+              ))}
+            </div>
+
+            <MaterialsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              search={search}
+              category={category}
+              status={status}
+            />
+          </>
         )}
       </main>
     </div>

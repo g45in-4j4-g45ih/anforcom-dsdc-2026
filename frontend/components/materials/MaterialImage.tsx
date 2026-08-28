@@ -23,25 +23,32 @@ export default function MaterialImage({
   src,
   alt,
 }: MaterialImageProps) {
-  const [hasError, setHasError] = useState(false);
-
-  if (!src || hasError) {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-gray-400">
-        <ImageOff className="h-7 w-7" aria-hidden="true" />
-        <span className="text-sm">Foto tidak tersedia</span>
-      </div>
-    );
-  }
+  const [isLoaded, setIsLoaded] = useState(false);
 
   return (
-    // Backend mengirim URL media yang dapat berasal dari host berbeda.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={resolveImageUrl(src)}
-      alt={alt}
-      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-      onError={() => setHasError(true)}
-    />
+    <div className="relative h-full w-full">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-50 text-gray-400">
+        <ImageOff
+          className="h-6 w-6 sm:h-7 sm:w-7"
+          aria-hidden="true"
+        />
+        <span className="text-[10px] sm:text-sm">
+          Foto tidak tersedia
+        </span>
+      </div>
+
+      {src && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={resolveImageUrl(src)}
+          alt={alt}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setIsLoaded(false)}
+          className={`absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105 ${
+            isLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      )}
+    </div>
   );
 }
