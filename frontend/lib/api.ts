@@ -275,3 +275,73 @@ export async function updateStore(storeId: number, formData: FormData, token: st
 
   return res.json();
 }
+
+export interface CartItemResponse {
+  id: number;
+  item: number;
+  item_name: string;
+  item_image: string | null;
+  item_unit: string;
+  item_price: number;
+  item_stock: string;
+  item_status: string;
+  store_id: number;
+  store_name: string;
+  quantity: string;
+  added_at: string;
+}
+
+export interface CartGroup {
+  store_id: number;
+  store_name: string;
+  items: CartItemResponse[];
+}
+
+export async function fetchCart(token: string): Promise<CartGroup[]> {
+  const res = await fetch(`${API_BASE_URL}/api/cart/`, {
+    headers: { Authorization: `Token ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addToCart(itemId: number, quantity: number, token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/cart/items/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ item: itemId, quantity }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? "Gagal menambah ke keranjang.");
+  }
+  return res.json();
+}
+
+export async function updateCartItemQuantity(cartItemId: number, quantity: number, token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/cart/items/${cartItemId}/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ quantity }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.quantity?.[0] ?? "Gagal mengubah jumlah.");
+  }
+  return res.json();
+}
+
+export async function removeCartItem(cartItemId: number, token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/cart/items/${cartItemId}/`, {
+    method: "DELETE",
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!res.ok) throw new Error("Gagal menghapus item dari keranjang.");
+}
