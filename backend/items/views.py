@@ -1,15 +1,22 @@
-from decimal import Decimal, InvalidOperation
-
+from decimal import Decimal
+ 
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
 from rest_framework.parsers import FormParser, MultiPartParser
-
-from .models import Item, Klaim, Store
-from .serializers import CheckoutInputSerializer, ItemSerializer, KlaimManagementSerializer, StoreSerializer
+from rest_framework.response import Response
+ 
+from .models import CartItem, Item, Klaim, Store
+from .serializers import (
+    CartCheckoutSerializer,
+    CartItemSerializer,
+    CheckoutInputSerializer,
+    ItemSerializer,
+    KlaimManagementSerializer,
+    StoreSerializer,
+)
 
 class StoreListCreateView(generics.ListCreateAPIView):
     queryset = Store.objects.all()
@@ -83,18 +90,143 @@ class ItemDetailView(generics.RetrieveUpdateAPIView):
             return Item.objects.filter(store=self.request.user.store)
         return Item.objects.none()
 
+# ===== Cart =====
+ 
+class CartListView(generics.ListAPIView):
+    """GET /api/cart/ — isi keranjang user, dikelompokkan per toko."""
+ 
+    serializer_class = CartItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+ 
+    def get_queryset(self):
+        return CartItem.objects.filter(buyer=self.request.user).select_related(
+            "item", "item__store"
+        )
+ 
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+ 
+        grouped = {}
+        for entry in serializer.data:
+            store_id = entry["store_id"]
+            grouped.setdefault(
+                store_id, {"store_id": store_id, "store_name": entry["store_name"], "items": []}
+            )
+            grouped[store_id]["items"].append(entry)
+ 
+        return Response(list(grouped.values()))
+ 
+ 
+class CartItemCreateView(generics.CreateAPIView):
+    """POST /api/cart/items/ — tambah item ke keranjang.
+    Kalau item yang sama udah ada, quantity-nya ditambah (bukan bikin row baru)."""
+ 
+    serializer_class = CartItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+ 
+    def create(self, request, *args, **kwargs):
+        item_id = request.data.get("item")
+        quantity = Decimal(str(request.data.get("quantity", 1)))
+ 
+        existing = CartItem.objects.filter(buyer=request.user, item_id=item_id).first()
+        if existing:
+            new_quantity = existing.quantity + quantity
+            item = existing.item
+            if new_quantity > item.quantity_remaining:
+                return Response(
+                    {"error": f"Stok '{item.name}' cuma tersisa {item.quantity_remaining} {item.unit}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            existing.quantity = new_quantity
+            existing.save(update_fields=["quantity"])
+            return Response(CartItemSerializer(existing).data, status=status.HTTP_200_OK)
+ 
+        serializer = self.get_serializer(data={"item": item_id, "quantity": str(quantity)})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(buyer=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+ 
+ 
+class CartItemDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """PATCH (ubah quantity) / DELETE (hapus) /api/cart/items/<id>/"""
+ 
+    serializer_class = CartItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+ 
+    def get_queryset(self):
+        return CartItem.objects.filter(buyer=self.request.user)
+ 
+ 
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def cart_checkout(request):
+    input_serializer = CartCheckoutSerializer(data=request.data)
+    input_serializer.is_valid(raise_exception=True)
+    data = input_serializer.validated_data
+ 
+    cart_items = list(
+        CartItem.objects.filter(buyer=request.user, item__store_id=data["store_id"])
+        .select_related("item")
+    )
+    if not cart_items:
+        return Response(
+            {"error": "Nggak ada item di keranjang buat toko ini."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+ 
+    created_klaim = []
+    shipping_cost = data.get("shipping_cost", 0)
+ 
+    with transaction.atomic():
+        for index, cart_entry in enumerate(cart_items):
+            item = Item.objects.select_for_update().get(pk=cart_entry.item_id)
+ 
+            try:
+                item.apply_claim(cart_entry.quantity)
+            except ValueError as e:
+                transaction.set_rollback(True)
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            is_free = item.listing_type != Item.ListingType.DISKON
+            price = item.price_sale if not is_free else None
+            subtotal = int(price * cart_entry.quantity) if price else 0
+            this_shipping = shipping_cost if index == 0 else 0  # ongkir cuma sekali
+            total_price = subtotal + (0 if is_free else this_shipping)
+ 
+            klaim = Klaim.objects.create(
+                item=item,
+                peminat=request.user,
+                jumlah_diklaim=cart_entry.quantity,
+                price_at_claim=price,
+                total_price=total_price,
+                pickup_method=data["pickup_method"],
+                pickup_time=data.get("pickup_time"),
+                address_text=data.get("address_text", ""),
+                address_lat=data.get("address_lat"),
+                address_lng=data.get("address_lng"),
+                shipping_cost=this_shipping,
+                notes=data.get("notes", ""),
+            )
+ 
+            if is_free:
+                klaim.status = Klaim.StatusKlaim.DIBAYAR
+                klaim.paid_at = timezone.now()
+                klaim.save(update_fields=["status", "paid_at"])
+ 
+            created_klaim.append(klaim)
+            cart_entry.delete()
+ 
+    return Response(
+        KlaimManagementSerializer(created_klaim, many=True).data,
+        status=status.HTTP_201_CREATED,
+    )
+ 
+# ==== Checkout ====
 
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def checkout_item(request, pk):
-    """
-    Bikin Klaim baru buat 1 item. Body: jumlah, pickup_method, pickup_time
-    (kalau self_pickup), address_text/lat/lng (kalau ojek), shipping_cost, notes.
-
-    Item donasi otomatis langsung berstatus DIBAYAR (skip step bayar).
-    Item jual-diskon berstatus MENUNGGU_PEMBAYARAN, nunggu self-report lewat
-    endpoint mark_klaim_paid setelah scan QRIS toko.
-    """
     input_serializer = CheckoutInputSerializer(data=request.data)
     input_serializer.is_valid(raise_exception=True)
     data = input_serializer.validated_data
