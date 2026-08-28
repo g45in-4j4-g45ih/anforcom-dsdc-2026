@@ -86,6 +86,17 @@ export interface ManagedMaterial extends Material {
   claims: MaterialClaim[];
 }
 
+export interface MaterialClaimInput {
+  quantity: string;
+  pickup_method: MaterialPickupMethod;
+  pickup_time?: string | null;
+  address_text?: string;
+  address_lat?: number | null;
+  address_lng?: number | null;
+  shipping_cost?: number;
+  notes?: string;
+}
+
 export interface MaterialFilters {
   search?: string;
   category?: string;

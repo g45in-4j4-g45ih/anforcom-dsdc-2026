@@ -2,6 +2,7 @@ import type {
   ManagedMaterial,
   Material,
   MaterialClaim,
+  MaterialClaimInput,
   MaterialFilters,
   ReportMaterialResponse,
 } from "@/types/materials";
@@ -68,6 +69,33 @@ export async function getMaterials(
 
   return request<Material[]>(
     `/api/materials/${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function claimMaterial(
+  id: number | string,
+  input: MaterialClaimInput,
+  token: string,
+): Promise<MaterialClaim> {
+  return request<MaterialClaim>(
+    `/api/items/${id}/checkout/`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...createAuthorizationHeader(token),
+      },
+      body: JSON.stringify({
+        jumlah: input.quantity,
+        pickup_method: input.pickup_method,
+        pickup_time: input.pickup_time ?? null,
+        address_text: input.address_text ?? "",
+        address_lat: input.address_lat ?? null,
+        address_lng: input.address_lng ?? null,
+        shipping_cost: input.shipping_cost ?? 0,
+        notes: input.notes ?? "",
+      }),
+    },
   );
 }
 

@@ -1,16 +1,11 @@
 import {
   ArrowUpRight,
   Clock3,
-  Coffee,
-  Droplet,
-  Egg,
-  Layers,
   MapPin,
-  Recycle,
   TriangleAlert,
-  Utensils,
 } from "lucide-react";
 import Link from "next/link";
+import MaterialCategoryChip from "@/components/materials/MaterialCategoryChip";
 
 import MaterialImage from "@/components/materials/MaterialImage";
 import type { Material } from "@/types/materials";
@@ -56,39 +51,6 @@ function hasLimitedStock(material: Material) {
   return remaining / total <= 0.25;
 }
 
-function CategoryIcon({ category }: { category: string }) {
-  const className = "h-3 w-3 shrink-0";
-  const normalizedCategory = category.trim().toLowerCase();
-
-  if (normalizedCategory.includes("bawang")) {
-    return <Layers className={className} aria-hidden="true" />;
-  }
-
-  if (normalizedCategory.includes("kopi")) {
-    return <Coffee className={className} aria-hidden="true" />;
-  }
-
-  if (
-    normalizedCategory.includes("jelantah") ||
-    normalizedCategory.includes("minyak")
-  ) {
-    return <Droplet className={className} aria-hidden="true" />;
-  }
-
-  if (normalizedCategory.includes("telur")) {
-    return <Egg className={className} aria-hidden="true" />;
-  }
-
-  if (
-    normalizedCategory.includes("nasi") ||
-    normalizedCategory.includes("makanan")
-  ) {
-    return <Utensils className={className} aria-hidden="true" />;
-  }
-
-  return <Recycle className={className} aria-hidden="true" />;
-}
-
 export default function MaterialCard({
   material,
 }: MaterialCardProps) {
@@ -126,12 +88,10 @@ export default function MaterialCard({
       </div>
 
       <div className="p-3 sm:p-4">
-        <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-secondary-light/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:text-xs">
-          <CategoryIcon category={material.category} />
-          <span className="truncate">
-            {material.category || "Material lainnya"}
-          </span>
-        </span>
+        <MaterialCategoryChip
+          category={material.category}
+          className="px-2 text-[10px] sm:text-xs"
+        />
 
         <h2 className="mt-2 line-clamp-2 text-sm font-bold leading-5 text-gray-900 sm:text-base">
           {material.name}
