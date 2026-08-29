@@ -3,14 +3,6 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItemResponse } from "@/lib/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function resolveImageUrl(path: string | null): string | null {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `${API_BASE_URL}${path}`;
-}
-
 function formatRupiah(value: number) {
   return `Rp ${value.toLocaleString("id-ID")}`;
 }
@@ -35,7 +27,6 @@ export default function CartItemRow({
   const quantity = Number(entry.quantity);
   const stock = Number(entry.item_stock);
   const subtotal = entry.item_price * quantity;
-  const imageUrl = resolveImageUrl(entry.item_image);
 
   return (
     <div className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-b-0">
@@ -43,12 +34,12 @@ export default function CartItemRow({
         type="checkbox"
         checked={isSelected}
         onChange={() => onToggleSelect(entry.id)}
-        className="h-4 w-4 shrink-0 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+        className="h-4 w-4 shrink-0 rounded border-gray-300 text-secondary focus:ring-secondary"
       />
 
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
-        {imageUrl ? (
-          <img src={imageUrl} alt={entry.item_name} className="h-full w-full object-cover" />
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-50">
+        {entry.item_image ? (
+          <img src={entry.item_image} alt={entry.item_name} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
             Tanpa foto
@@ -61,7 +52,7 @@ export default function CartItemRow({
         {entry.item_price > 0 ? (
           <p className="text-xs text-gray-500 sm:text-sm">{formatRupiah(entry.item_price)}</p>
         ) : (
-          <p className="text-xs font-semibold text-green-600 sm:text-sm">Gratis</p>
+          <p className="text-xs font-medium text-secondary sm:text-sm">Gratis</p>
         )}
 
         <div className="mt-2 flex items-center gap-2">
@@ -69,7 +60,7 @@ export default function CartItemRow({
             type="button"
             disabled={isUpdating || quantity <= 1}
             onClick={() => onQuantityChange(entry.id, quantity - 1)}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-pink-300 hover:text-pink-600 disabled:opacity-40"
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-secondary-light disabled:opacity-40"
           >
             <Minus className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -78,7 +69,7 @@ export default function CartItemRow({
             type="button"
             disabled={isUpdating || quantity >= stock}
             onClick={() => onQuantityChange(entry.id, quantity + 1)}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-green-300 hover:text-green-600 disabled:opacity-40"
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-secondary-light disabled:opacity-40"
           >
             <Plus className="h-3 w-3" aria-hidden="true" />
           </button>
