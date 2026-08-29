@@ -1,5 +1,10 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export function toAbsoluteMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
+}
+
 export interface LocationResult {
   display_name: string;
   lat: string;
@@ -82,6 +87,7 @@ export interface StoreDetail {
   lokasi_detail: StoreLocation | null;
   description: string;
   logo: string | null;
+  qris_image: string | null;
 }
 
 export interface ItemImageData {
@@ -117,9 +123,9 @@ export async function fetchStoreListings(storeId: number): Promise<ItemListing[]
   return res.json();
 }
 
-export async function fetchListings(listingType: "diskon" | "donasi"): Promise<ItemListing[]> {
-  const res = await fetch(`${API_BASE_URL}/api/items/?listing_type=${listingType}`);
-  if (!res.ok) return [];
+export async function fetchStoreById(storeId: number): Promise<StoreDetail | null> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/${storeId}/`, { cache: "no-store" });
+  if (!res.ok) return null;
   return res.json();
 }
 
@@ -350,4 +356,87 @@ export async function removeCartItem(cartItemId: number, token: string) {
     headers: { Authorization: `Token ${token}` },
   });
   if (!res.ok) throw new Error("Gagal menghapus item dari keranjang.");
+}
+
+export interface KlaimResponse {
+  id: number;
+  item: number;
+  item_name: string;
+  item_image: string | null;
+  item_unit: string;
+  jumlah_diklaim: string;
+  status: string;
+  price_at_claim: number | null;
+  total_price: number;
+  pickup_method: string;
+  pickup_time: string | null;
+  shipping_cost: number;
+  store_qris: string | null;
+  store_kontak_wa: string;
+  created_at: string;
+}
+
+interface CheckoutPayload {
+  pickup_method: "Self Pickup" | "Ojek";
+  pickup_time?: string;
+  address_text?: string;
+  address_lat?: number;
+  address_lng?: number;
+  shipping_cost?: number;
+  notes?: string;
+}
+
+export async function checkoutSingleItem(
+  itemId: number,
+  jumlah: number,
+  payload: CheckoutPayload,
+  token: string
+): Promise<KlaimResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/items/${itemId}/checkout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ jumlah, ...payload }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal checkout."));
+  }
+  return res.json();
+}
+
+export async function cartCheckout(
+  storeId: number,
+  cartItemIds: number[],
+  payload: CheckoutPayload,
+  token: string
+): Promise<KlaimResponse[]> {
+  const res = await fetch(`${API_BASE_URL}/api/cart/checkout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({
+      store_id: storeId,
+      cart_item_ids: cartItemIds,
+      ...payload,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal checkout."));
+  }
+  return res.json();
+}
+
+export async function markKlaimPaid(klaimId: number, token: string): Promise<KlaimResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/klaim/${klaimId}/mark-paid/`, {
+    method: "PATCH",
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal konfirmasi pembayaran."));
+  }
+  return res.json();
 }

@@ -19,6 +19,11 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+function toAbsoluteUrl(url: string) {
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
+}
+
 export default async function ItemDetailPage({ params }: PageProps) {
   const { id } = await params;
   const item = await getItem(id);
@@ -26,11 +31,11 @@ export default async function ItemDetailPage({ params }: PageProps) {
 
   const storeId = item.store_detail?.id ?? item.store;
   const ratingSummary = await fetchRatingSummary(storeId);
-
+  
   const itemData: ItemDetailData = {
     id: item.id,
     name: item.name,
-    images: item.images.map((img) => img.image),
+    images: item.images.map((img) => toAbsoluteUrl(img.image)),
     badgeLabel: badgeLabelFor(item),
     priceOriginal: item.price_original ?? undefined,
     priceSale: item.price_sale ?? undefined,

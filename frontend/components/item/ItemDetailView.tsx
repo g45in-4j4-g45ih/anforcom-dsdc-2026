@@ -214,7 +214,7 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   }
   
   function handleBuyNow() {
-    console.log("Beli sekarang:", { itemId: item.id, quantity });
+    router.push(`/checkout/${store.id}?itemId=${item.id}&quantity=${quantity}`);
   }
 
   return (
