@@ -117,6 +117,12 @@ export async function fetchStoreListings(storeId: number): Promise<ItemListing[]
   return res.json();
 }
 
+export async function fetchListings(listingType: "diskon" | "donasi"): Promise<ItemListing[]> {
+  const res = await fetch(`${API_BASE_URL}/api/items/?listing_type=${listingType}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function createItem(formData: FormData, token: string) {
   const res = await fetch(`${API_BASE_URL}/api/items/`, {
     method: "POST",
