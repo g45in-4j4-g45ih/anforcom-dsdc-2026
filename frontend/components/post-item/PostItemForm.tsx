@@ -224,7 +224,6 @@ export default function PostItemForm() {
                 onChange={(v) => {
                   updateField("condition", v as Condition);
                   updateField("category", "");
-                  updateField("listingType", "");
                 }}
                 options={[
                   { label: "Masih Layak Dimakan", value: "layak_makan" },
