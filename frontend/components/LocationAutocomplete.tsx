@@ -6,9 +6,14 @@ import { searchLocations, type LocationResult } from "@/lib/api";
 interface LocationAutocompleteProps {
   value: string;
   onSelect: (location: { text: string; lat: number; lng: number }) => void;
+  placeholder?: string;
 }
 
-export default function LocationAutocomplete({ value, onSelect }: LocationAutocompleteProps) {
+export default function LocationAutocomplete({
+  value,
+  onSelect,
+  placeholder = "Cari nama jalan / kelurahan / kecamatan",
+}: LocationAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<LocationResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -30,14 +35,13 @@ export default function LocationAutocomplete({ value, onSelect }: LocationAutoco
       setResults(data);
       setIsLoading(false);
       setIsOpen(true);
-    }, 400); // debounce 400ms biar nggak spam request tiap ketikan
+    }, 400);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query]);
 
-  // tutup dropdown kalau klik di luar
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -60,10 +64,9 @@ export default function LocationAutocomplete({ value, onSelect }: LocationAutoco
 
   return (
     <div ref={wrapperRef} className="relative">
-      <label className="mb-1 block text-sm font-medium text-gray-700">Lokasi</label>
       <div className="relative">
         <svg
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -77,21 +80,22 @@ export default function LocationAutocomplete({ value, onSelect }: LocationAutoco
         </svg>
         <input
           type="text"
+          autoComplete="off"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder="Contoh: Cibinong Griya A"
-          className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          placeholder={placeholder}
+          className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
         />
       </div>
 
       {isOpen && (
-        <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute z-20 mt-1 w-full rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/60">
           {isLoading && (
-            <div className="px-3 py-2 text-sm text-gray-400">Mencari lokasi...</div>
+            <div className="px-3 py-2.5 text-sm text-gray-400">Mencari lokasi...</div>
           )}
           {!isLoading && results.length === 0 && (
-            <div className="px-3 py-2 text-sm text-gray-400">Lokasi tidak ditemukan</div>
+            <div className="px-3 py-2.5 text-sm text-gray-400">Lokasi tidak ditemukan</div>
           )}
           {!isLoading &&
             results.map((result, idx) => (
@@ -99,7 +103,7 @@ export default function LocationAutocomplete({ value, onSelect }: LocationAutoco
                 key={idx}
                 type="button"
                 onClick={() => handleSelect(result)}
-                className="block w-full truncate px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                className="block w-full truncate px-3 py-2.5 text-left text-sm text-gray-700 first:rounded-t-xl last:rounded-b-xl hover:bg-secondary-light/10"
                 title={result.display_name}
               >
                 {result.display_name}
