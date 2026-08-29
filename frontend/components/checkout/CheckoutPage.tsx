@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import Navbar from "@/components/navigation/Navbar";
 import AddressForm, { EMPTY_ADDRESS, type AddressValue } from "@/components/AddressForm";
 import StepIndicator from "./StepIndicator";
+import { toAbsoluteMediaUrl } from "@/lib/api";
+
 import {
   StoreDetail,
   CartGroup,
@@ -351,7 +353,7 @@ export default function CheckoutPage({
               <p className="mb-3 text-sm font-semibold text-gray-900">Pembayaran QRIS</p>
               {store?.qris_image ? (
                 <img
-                  src={store.qris_image}
+                  src={toAbsoluteMediaUrl(entry.item_image)}
                   alt="QRIS"
                   className="mx-auto h-56 w-56 rounded-xl border border-gray-100 object-contain"
                 />
@@ -563,7 +565,7 @@ export default function CheckoutPage({
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-50">
                       {entry.item_image ? (
                         <img
-                          src={entry.item_image}
+                          src={toAbsoluteMediaUrl(entry.item_image)}
                           alt={entry.item_name}
                           className="h-full w-full object-cover"
                         />
