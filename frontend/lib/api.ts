@@ -15,6 +15,108 @@ export async function searchLocations(query: string): Promise<LocationResult[]> 
   return data.results ?? [];
 }
 
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  const firstFieldError = Object.values(body ?? {})[0];
+  if (Array.isArray(firstFieldError)) return String(firstFieldError[0]);
+  if (typeof firstFieldError === "string") return firstFieldError;
+  return body?.detail ?? fallback;
+}
+
+export async function registerAccount(data: {
+  username: string;
+  password: string;
+  email?: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/register/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal mendaftar. Coba lagi."));
+  }
+
+  return res.json();
+}
+
+export async function loginAccount(data: { username: string; password: string }): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Username atau password salah."));
+  }
+
+  return res.json();
+}
+
+export interface StoreLocation {
+  id: number;
+  alamat: string;
+  latitude: string | null;
+  longitude: string | null;
+}
+
+export interface StoreDetail {
+  id: number;
+  owner: number;
+  nama_toko: string;
+  kontak_wa: string;
+  lokasi: number | null;
+  lokasi_detail: StoreLocation | null;
+  description: string;
+  logo: string | null;
+}
+
+export interface ItemImageData {
+  id: number;
+  image: string;
+  order: number;
+}
+
+export interface ItemListing {
+  id: number;
+  name: string;
+  condition: "layak_makan" | "byproduct";
+  listing_type: "diskon" | "donasi" | null;
+  quantity_remaining: string;
+  unit: string;
+  price_original: number | null;
+  price_sale: number | null;
+  status: string;
+  images: ItemImageData[];
+  store_detail: StoreDetail;
+}
+
+export async function fetchStoreByOwner(userId: number | string): Promise<StoreDetail | null> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/?owner=${userId}`);
+  if (!res.ok) return null;
+  const data: StoreDetail[] = await res.json();
+  return data[0] ?? null;
+}
+
+export async function fetchStoreListings(storeId: number): Promise<ItemListing[]> {
+  const res = await fetch(`${API_BASE_URL}/api/items/?store=${storeId}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function createItem(formData: FormData, token: string) {
   const res = await fetch(`${API_BASE_URL}/api/items/`, {
     method: "POST",
@@ -48,14 +150,6 @@ export interface RatingSummary {
   count: number;
 }
 
-async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
-  const body = await res.json().catch(() => ({}));
-  const firstFieldError = Object.values(body ?? {})[0];
-  if (Array.isArray(firstFieldError)) return String(firstFieldError[0]);
-  if (typeof firstFieldError === "string") return firstFieldError;
-  return body?.detail ?? fallback;
-}
-
 export async function fetchRatings(storeId: number): Promise<Rating[]> {
   const res = await fetch(`${API_BASE_URL}/api/ratings/?store=${storeId}`);
   if (!res.ok) return [];
@@ -87,4 +181,167 @@ export async function submitRating(
   }
 
   return res.json();
+}
+
+export interface ItemImageResponse {
+  id: number;
+  image: string;
+  order: number;
+}
+
+export interface ItemApiResponse {
+  id: number;
+  store: number;
+  store_detail: {
+    id: number;
+    nama_toko: string;
+    kontak_wa: string;
+    lokasi: number | null;
+    lokasi_detail: {
+      id: number;
+      nama_lengkap: string;
+      latitude: number | null;
+      longitude: number | null;
+    } | null;
+  } | null;
+  name: string;
+  condition: "layak_makan" | "byproduct";
+  listing_type: "diskon" | "donasi" | null;
+  quantity_total: string;
+  quantity_remaining: string;
+  unit: string;
+  description: string;
+  category: string;
+  pickup_start: string | null;
+  pickup_end: string | null;
+  price_original: number | null;
+  price_sale: number | null;
+  best_before: string | null;
+  status: string;
+  images: ItemImageResponse[];
+  created_at: string;
+}
+
+export async function getItem(id: string | number): Promise<ItemApiResponse | null> {
+  const res = await fetch(`${API_BASE_URL}/api/items/${id}/`, { cache: "no-store" });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function createLocation(
+  data: { alamat: string; latitude?: number | null; longitude?: number | null },
+  token: string
+): Promise<StoreLocation> {
+  const res = await fetch(`${API_BASE_URL}/api/locations/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal menyimpan lokasi."));
+  }
+
+  return res.json();
+}
+
+export async function createStore(formData: FormData, token: string): Promise<StoreDetail> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/`, {
+    method: "POST",
+    headers: { Authorization: `Token ${token}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal membuat toko. Coba cek lagi isian form."));
+  }
+
+  return res.json();
+}
+
+export async function updateStore(storeId: number, formData: FormData, token: string): Promise<StoreDetail> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/${storeId}/`, {
+    method: "PATCH",
+    headers: { Authorization: `Token ${token}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal memperbarui toko. Coba cek lagi isian form."));
+  }
+
+  return res.json();
+}
+
+export interface CartItemResponse {
+  id: number;
+  item: number;
+  item_name: string;
+  item_image: string | null;
+  item_unit: string;
+  item_price: number;
+  item_stock: string;
+  item_status: string;
+  store_id: number;
+  store_name: string;
+  quantity: string;
+  added_at: string;
+}
+
+export interface CartGroup {
+  store_id: number;
+  store_name: string;
+  items: CartItemResponse[];
+}
+
+export async function fetchCart(token: string): Promise<CartGroup[]> {
+  const res = await fetch(`${API_BASE_URL}/api/cart/`, {
+    headers: { Authorization: `Token ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addToCart(itemId: number, quantity: number, token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/cart/items/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ item: itemId, quantity }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? "Gagal menambah ke keranjang.");
+  }
+  return res.json();
+}
+
+export async function updateCartItemQuantity(cartItemId: number, quantity: number, token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/cart/items/${cartItemId}/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ quantity }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.quantity?.[0] ?? "Gagal mengubah jumlah.");
+  }
+  return res.json();
+}
+
+export async function removeCartItem(cartItemId: number, token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/cart/items/${cartItemId}/`, {
+    method: "DELETE",
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!res.ok) throw new Error("Gagal menghapus item dari keranjang.");
 }
