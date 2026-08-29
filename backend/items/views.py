@@ -8,11 +8,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from django.contrib.auth import get_user_model, authenticate
-from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-
 from .models import CartItem, Item, Klaim, Store
 from .serializers import (
     CartCheckoutSerializer,
@@ -23,38 +18,6 @@ from .serializers import (
     StoreSerializer,
 )
 
-User = get_user_model()
-
-
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def register_view(request):
-    username = request.data.get("username")
-    password = request.data.get("password")
-    email = request.data.get("email", "")
-
-    if not username or not password:
-        return Response({"detail": "Username dan password wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
-    if User.objects.filter(username=username).exists():
-        return Response({"detail": "Username sudah dipakai."}, status=status.HTTP_400_BAD_REQUEST)
-
-    user = User.objects.create_user(username=username, password=password, email=email)
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({"token": token.key, "user": {"id": user.id, "username": user.username}})
-
-
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def login_view(request):
-    username = request.data.get("username")
-    password = request.data.get("password")
-    user = authenticate(username=username, password=password)
-
-    if not user:
-        return Response({"detail": "Username atau password salah."}, status=status.HTTP_400_BAD_REQUEST)
-
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({"token": token.key, "user": {"id": user.id, "username": user.username}})
 
 class StoreListCreateView(generics.ListCreateAPIView):
     queryset = Store.objects.all()
