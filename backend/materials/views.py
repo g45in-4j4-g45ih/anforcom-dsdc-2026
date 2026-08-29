@@ -20,10 +20,7 @@ class MaterialQuerysetMixin:
         overdue_candidates = (
             Item.objects.filter(
                 condition=Item.Condition.BYPRODUCT,
-                status__in=[
-                    Item.Status.TERSEDIA,
-                    Item.Status.TERSEDIA_SEBAGIAN,
-                ],
+                status=Item.Status.TERSEDIA,
                 pickup_date_end__lte=timezone.localdate(),
             )
             .prefetch_related("klaim_list")
