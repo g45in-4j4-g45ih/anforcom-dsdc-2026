@@ -9,6 +9,8 @@ function formatRupiah(value: number) {
 
 interface CartItemRowProps {
   entry: CartItemResponse;
+  isSelected: boolean;
+  onToggleSelect: (cartItemId: number) => void;
   onQuantityChange: (cartItemId: number, quantity: number) => void;
   onRemove: (cartItemId: number) => void;
   isUpdating: boolean;
@@ -16,6 +18,8 @@ interface CartItemRowProps {
 
 export default function CartItemRow({
   entry,
+  isSelected,
+  onToggleSelect,
   onQuantityChange,
   onRemove,
   isUpdating,
@@ -26,6 +30,13 @@ export default function CartItemRow({
 
   return (
     <div className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-b-0">
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => onToggleSelect(entry.id)}
+        className="h-4 w-4 shrink-0 rounded border-gray-300 text-secondary focus:ring-secondary"
+      />
+
       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-50">
         {entry.item_image ? (
           <img src={entry.item_image} alt={entry.item_name} className="h-full w-full object-cover" />

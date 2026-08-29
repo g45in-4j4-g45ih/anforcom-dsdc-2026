@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Store, TriangleAlert } from "lucide-react";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import CartItemRow from "./CartItemRow";
 import Navbar from "@/components/navigation/Navbar";
+
 function formatRupiah(value: number) {
   return `Rp ${value.toLocaleString("id-ID")}`;
 }
@@ -21,6 +22,7 @@ export default function CartView() {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") ?? "" : "";
 
@@ -34,6 +36,33 @@ export default function CartView() {
   useEffect(() => {
     load();
   }, [load]);
+
+  function toggleSelect(cartItemId: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cartItemId)) {
+        next.delete(cartItemId);
+      } else {
+        next.add(cartItemId);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAllInStore(group: CartGroup) {
+    const groupIds = group.items.map((entry) => entry.id);
+    const allSelected = groupIds.every((id) => selectedIds.has(id));
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        groupIds.forEach((id) => next.delete(id));
+      } else {
+        groupIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }
 
   async function handleQuantityChange(cartItemId: number, quantity: number) {
     setUpdatingId(cartItemId);
@@ -52,6 +81,11 @@ export default function CartView() {
     setUpdatingId(cartItemId);
     try {
       await removeCartItem(cartItemId, token);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(cartItemId);
+        return next;
+      });
       await load();
     } catch {
       setError("Gagal menghapus item.");
@@ -60,13 +94,30 @@ export default function CartView() {
     }
   }
 
-  function handleCheckout(storeId: number) {
-    router.push(`/checkout/${storeId}`);
+  function handleCheckout(group: CartGroup) {
+    const selectedInStore = group.items
+      .filter((entry) => selectedIds.has(entry.id))
+      .map((entry) => entry.id);
+
+    if (selectedInStore.length === 0) return;
+
+    router.push(`/checkout/${group.store_id}?items=${selectedInStore.join(",")}`);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8f6f1]">
+        <Navbar />
+        <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+          <p className="text-sm text-gray-400">Memuat keranjang...</p>
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-[#f8f6f1]">
-    <Navbar />
+      <Navbar />
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="mb-6 flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-secondary" aria-hidden="true" />
@@ -83,9 +134,7 @@ export default function CartView() {
           </div>
         )}
 
-        {isLoading ? (
-          <p className="text-sm text-gray-400">Memuat keranjang...</p>
-        ) : groups.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
             <ShoppingCart className="mx-auto h-9 w-9 text-gray-400" aria-hidden="true" />
             <h2 className="mt-3 font-semibold text-gray-900">Keranjangmu masih kosong</h2>
@@ -96,10 +145,13 @@ export default function CartView() {
         ) : (
           <div className="space-y-4">
             {groups.map((group) => {
-              const subtotal = group.items.reduce(
-                (sum, entry) => sum + entry.item_price * Number(entry.quantity),
-                0
-              );
+              const groupIds = group.items.map((entry) => entry.id);
+              const allSelected = groupIds.every((id) => selectedIds.has(id));
+              const selectedCount = groupIds.filter((id) => selectedIds.has(id)).length;
+
+              const subtotal = group.items
+                .filter((entry) => selectedIds.has(entry.id))
+                .reduce((sum, entry) => sum + entry.item_price * Number(entry.quantity), 0);
 
               return (
                 <div
@@ -107,6 +159,12 @@ export default function CartView() {
                   className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
                 >
                   <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50/50 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={() => toggleSelectAllInStore(group)}
+                      className="h-4 w-4 rounded border-gray-300 text-secondary focus:ring-secondary"
+                    />
                     <Store className="h-4 w-4 text-secondary" aria-hidden="true" />
                     <p className="text-sm font-bold text-gray-900">{group.store_name}</p>
                   </div>
@@ -116,6 +174,8 @@ export default function CartView() {
                       <CartItemRow
                         key={entry.id}
                         entry={entry}
+                        isSelected={selectedIds.has(entry.id)}
+                        onToggleSelect={toggleSelect}
                         onQuantityChange={handleQuantityChange}
                         onRemove={handleRemove}
                         isUpdating={updatingId === entry.id}
@@ -127,16 +187,23 @@ export default function CartView() {
                     <div>
                       {subtotal > 0 && (
                         <p className="text-xs text-gray-500 sm:text-sm">
-                          Subtotal: <span className="font-bold text-gray-900">{formatRupiah(subtotal)}</span>
+                          Subtotal ({selectedCount} dipilih):{" "}
+                          <span className="font-bold text-gray-900">{formatRupiah(subtotal)}</span>
+                        </p>
+                      )}
+                      {subtotal === 0 && selectedCount > 0 && (
+                        <p className="text-xs text-gray-500 sm:text-sm">
+                          {selectedCount} item dipilih
                         </p>
                       )}
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleCheckout(group.store_id)}
-                      className="rounded-xl bg-secondary px-5 py-2 text-sm font-semibold text-white transition hover:bg-secondary/90"
+                      disabled={selectedCount === 0}
+                      onClick={() => handleCheckout(group)}
+                      className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Checkout Toko Ini
+                      Checkout ({selectedCount})
                     </button>
                   </div>
                 </div>
