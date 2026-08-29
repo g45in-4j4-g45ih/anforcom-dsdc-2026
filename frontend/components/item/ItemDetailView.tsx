@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import RatingList from "../rating/RatingList";
+import { useRouter } from "next/navigation";
 
 export interface ItemDetailData {
   id: number;
@@ -77,7 +78,7 @@ export default function ItemDetailView({
   const [mainIndex, setMainIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
-
+  const router = useRouter();
   const hasDiscount = item.priceOriginal && item.priceSale && item.priceOriginal > item.priceSale;
   const discountPercent = hasDiscount
     ? Math.round((1 - item.priceSale! / item.priceOriginal!) * 100)
@@ -94,7 +95,7 @@ export default function ItemDetailView({
   }
 
   function handleBuyNow() {
-    console.log("Beli sekarang:", { itemId: item.id, quantity });
+    router.push(`/checkout/${store.id}?itemId=${item.id}&quantity=${quantity}`);
   }
 
   return (
