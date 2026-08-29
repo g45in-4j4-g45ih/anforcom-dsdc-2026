@@ -86,7 +86,70 @@ class ItemSerializer(serializers.ModelSerializer):
             ItemImage.objects.create(item=item, image=image_file, order=order)
         return item
 
+# ==== Cart ====
 
+class CartItemSerializer(serializers.ModelSerializer):
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    item_image = serializers.SerializerMethodField()
+    item_unit = serializers.CharField(source="item.unit", read_only=True)
+    item_price = serializers.SerializerMethodField()
+    item_stock = serializers.DecimalField(
+        source="item.quantity_remaining", max_digits=10, decimal_places=2, read_only=True
+    )
+    item_status = serializers.CharField(source="item.status", read_only=True)
+    store_id = serializers.IntegerField(source="item.store_id", read_only=True)
+    store_name = serializers.CharField(source="item.store.nama_toko", read_only=True)
+ 
+    class Meta:
+        model = CartItem
+        fields = [
+            "id", "item", "item_name", "item_image", "item_unit", "item_price",
+            "item_stock", "item_status", "store_id", "store_name", "quantity", "added_at",
+        ]
+        read_only_fields = ["id", "added_at"]
+ 
+    def get_item_image(self, obj):
+        first_image = obj.item.images.first()
+        return first_image.image.url if first_image else None
+ 
+    def get_item_price(self, obj):
+        return obj.item.price_sale if obj.item.listing_type == Item.ListingType.DISKON else 0
+ 
+    def validate(self, data):
+        item = data.get("item") or (self.instance.item if self.instance else None)
+        quantity = data.get("quantity")
+        if item and quantity is not None and quantity > item.quantity_remaining:
+            raise serializers.ValidationError(
+                {"quantity": f"Stok cuma tersisa {item.quantity_remaining} {item.unit}"}
+            )
+        return data
+ 
+ 
+class CartCheckoutSerializer(serializers.Serializer):
+    """Input body buat POST /cart/checkout/ — checkout item TERPILIH
+    milik user buat 1 store."""
+
+    store_id = serializers.IntegerField()
+    cart_item_ids = serializers.ListField(
+        child=serializers.IntegerField(), allow_empty=False
+    )
+    pickup_method = serializers.ChoiceField(choices=Klaim.PickupMethod.choices)
+    pickup_time = serializers.TimeField(required=False, allow_null=True)
+    address_text = serializers.CharField(required=False, allow_blank=True)
+    address_lat = serializers.FloatField(required=False, allow_null=True)
+    address_lng = serializers.FloatField(required=False, allow_null=True)
+    shipping_cost = serializers.IntegerField(required=False, default=0)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        if data["pickup_method"] == Klaim.PickupMethod.OJEK and not data.get("address_text"):
+            raise serializers.ValidationError(
+                {"address_text": "Alamat wajib diisi untuk pengiriman via ojek."}
+            )
+        if data["pickup_method"] == Klaim.PickupMethod.SELF_PICKUP and not data.get("pickup_time"):
+            raise serializers.ValidationError({"pickup_time": "Wajib pilih jam pengambilan."})
+        return data
+    
 # ===== Checkout =====
 
 class CheckoutInputSerializer(serializers.Serializer):
