@@ -53,8 +53,8 @@ export default function LocationAutocomplete({ value, onSelect }: LocationAutoco
     setIsOpen(false);
     onSelect({
       text: result.display_name,
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
+      lat: Number(parseFloat(result.lat).toFixed(6)),
+      lng: Number(parseFloat(result.lon).toFixed(6)),
     });
   }
 
@@ -80,7 +80,7 @@ export default function LocationAutocomplete({ value, onSelect }: LocationAutoco
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder="Contoh: Cibinong Griya A"
+          placeholder="Isi alamatmu di sini"
           className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
         />
       </div>

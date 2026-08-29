@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-
+from django.utils import timezone
 from locations.models import Location
 
 class Store(models.Model):
@@ -29,7 +29,6 @@ class Item(models.Model):
 
     class Status(models.TextChoices):
         TERSEDIA = "Tersedia"
-        TERSEDIA_SEBAGIAN = "Tersedia Sebagian"
         HABIS = "Habis"
         SELESAI = "Selesai"
         KADALUARSA = "Kadaluarsa"
@@ -91,10 +90,9 @@ class Item(models.Model):
         return self.pickup_end < timezone.localtime().time()
  
     def expire_if_overdue(self):
-        expirable_statuses = {self.Status.TERSEDIA, self.Status.TERSEDIA_SEBAGIAN}
         if (
             self.condition != self.Condition.BYPRODUCT
-            or self.status not in expirable_statuses
+            or self.status != self.Status.TERSEDIA
             or not self.pickup_window_has_ended()
             or self.klaim_list.exists()
         ):
@@ -102,38 +100,30 @@ class Item(models.Model):
         self.status = self.Status.KADALUARSA
         self.save(update_fields=["status", "updated_at"])
         return True
- 
+
     def apply_claim(self, jumlah_klaim):
         self.expire_if_overdue()
- 
-        claimable_statuses = {self.Status.TERSEDIA, self.Status.TERSEDIA_SEBAGIAN}
-        if self.status not in claimable_statuses:
+
+        if self.status != self.Status.TERSEDIA:
             raise ValueError("Item tidak tersedia untuk diklaim.")
         if jumlah_klaim is None or jumlah_klaim <= 0:
             raise ValueError("Jumlah klaim harus lebih dari 0")
         if jumlah_klaim > self.quantity_remaining:
             raise ValueError("Jumlah klaim melebihi sisa stok")
- 
+
         self.quantity_remaining -= jumlah_klaim
-        self.status = (
-            self.Status.HABIS if self.quantity_remaining == 0 else self.Status.TERSEDIA_SEBAGIAN
-        )
+        if self.quantity_remaining == 0:
+            self.status = self.Status.HABIS
         self.save(update_fields=["quantity_remaining", "status", "updated_at"])
- 
+        
     def release_claim(self, jumlah):
-        """Kembalikan stok — dipanggil pas Klaim dibatalkan sebelum dibayar."""
         if jumlah is None or jumlah <= 0:
             return
         self.quantity_remaining += jumlah
         if self.quantity_remaining >= self.quantity_total:
             self.quantity_remaining = self.quantity_total
-        self.status = (
-            self.Status.TERSEDIA
-            if self.quantity_remaining == self.quantity_total
-            else self.Status.TERSEDIA_SEBAGIAN
-        )
+        self.status = self.Status.TERSEDIA
         self.save(update_fields=["quantity_remaining", "status", "updated_at"])
-
 
 class ItemImage(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="images")
@@ -143,6 +133,20 @@ class ItemImage(models.Model):
     class Meta:
         ordering = ["order", "id"]
 
+class CartItem(models.Model):
+    buyer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cart_items"
+    )
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="cart_entries")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    added_at = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        unique_together = [["buyer", "item"]]
+        ordering = ["-added_at"]
+ 
+    def __str__(self):
+        return f"{self.buyer} - {self.item.name} x{self.quantity}"
 
 class Klaim(models.Model):
     class StatusKlaim(models.TextChoices):
@@ -190,3 +194,4 @@ class Klaim(models.Model):
 
     def __str__(self):
         return f"{self.peminat} - {self.item.name} x{self.jumlah_diklaim}"
+
