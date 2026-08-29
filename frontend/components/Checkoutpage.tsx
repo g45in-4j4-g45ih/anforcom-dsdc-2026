@@ -29,6 +29,9 @@ type PaymentMethod = "transfer" | "qris";
 interface CheckoutPageProps {
   order: CheckoutOrderItem;
   store: CheckoutStoreInfo;
+  storeId: number;
+  selectedItemIds?: number[];
+  directItem?: { itemId: number; quantity: number };
   onConfirm: (payload: {
     deliveryMethod: DeliveryMethod;
     address: string;
