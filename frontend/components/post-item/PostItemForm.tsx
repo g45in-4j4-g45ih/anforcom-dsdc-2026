@@ -1,5 +1,6 @@
 "use client";
 import Navbar from "@/components/navigation/Navbar";
+
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -198,7 +199,7 @@ export default function PostItemForm() {
       </div>
 
       {error && (
-        <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+        <div className="rounded-full bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -213,7 +214,7 @@ export default function PostItemForm() {
                 value={form.name}
                 onChange={(e) => updateField("name", e.target.value)}
                 placeholder="Contoh: Nasi Bungkus Ayam"
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
+                className="w-full rounded-full border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
               />
             </div>
 
@@ -252,7 +253,7 @@ export default function PostItemForm() {
                   value={form.quantity}
                   onChange={(e) => updateField("quantity", e.target.value)}
                   placeholder="0"
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
+                  className="w-full rounded-full border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
                 />
               </div>
               <div>
@@ -280,7 +281,7 @@ export default function PostItemForm() {
                     type="date"
                     value={form.pickupDateStart}
                     onChange={(e) => updateField("pickupDateStart", e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
+                    className="w-full rounded-full border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
                   />
                 </div>
                 <div>
@@ -290,7 +291,7 @@ export default function PostItemForm() {
                     value={form.pickupDateEnd}
                     min={form.pickupDateStart || undefined}
                     onChange={(e) => updateField("pickupDateEnd", e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
+                    className="w-full rounded-full border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
                   />
                 </div>
               </div>
@@ -367,7 +368,7 @@ export default function PostItemForm() {
                     <button
                       type="button"
                       onClick={() => updateField("listingType", "diskon")}
-                      className={`rounded-xl border py-2 text-sm font-medium transition ${
+                      className={`rounded-full border py-2 text-sm font-medium transition ${
                         form.listingType === "diskon"
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-gray-200 text-gray-500"
@@ -378,7 +379,7 @@ export default function PostItemForm() {
                     <button
                       type="button"
                       onClick={() => updateField("listingType", "donasi")}
-                      className={`rounded-xl border py-2 text-sm font-medium transition ${
+                      className={`rounded-full border py-2 text-sm font-medium transition ${
                         form.listingType === "donasi"
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-gray-200 text-gray-500"
@@ -393,7 +394,7 @@ export default function PostItemForm() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">Harga Asli</label>
-                      <div className="flex items-center rounded-xl border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
+                      <div className="flex items-center rounded-full border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
                         <span className="pl-3 text-sm text-gray-500">Rp</span>
                         <input
                           type="number"
@@ -402,13 +403,13 @@ export default function PostItemForm() {
                           value={form.priceOriginal}
                           onChange={(e) => updateField("priceOriginal", e.target.value)}
                           placeholder="12000"
-                          className="w-full rounded-xl px-2 py-2 text-sm text-gray-900 focus:outline-none"
+                          className="w-full rounded-full px-2 py-2 text-sm text-gray-900 focus:outline-none"
                         />
                       </div>
                     </div>
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">Harga Jual</label>
-                      <div className="flex items-center rounded-xl border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
+                      <div className="flex items-center rounded-full border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
                         <span className="pl-3 text-sm text-gray-500">Rp</span>
                         <input
                           type="number"
@@ -417,7 +418,7 @@ export default function PostItemForm() {
                           value={form.priceSale}
                           onChange={(e) => updateField("priceSale", e.target.value)}
                           placeholder="7000"
-                          className="w-full rounded-xl px-2 py-2 text-sm text-gray-900 focus:outline-none"
+                          className="w-full rounded-full px-2 py-2 text-sm text-gray-900 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -436,7 +437,7 @@ export default function PostItemForm() {
                     type="date"
                     value={form.bestBefore}
                     onChange={(e) => updateField("bestBefore", e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
+                    className="w-full rounded-full border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
                   />
                 </div>
               </>

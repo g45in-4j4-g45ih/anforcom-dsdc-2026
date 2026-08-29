@@ -39,7 +39,7 @@ export default function SelectField({ value, options, onChange, placeholder = "P
       <button
         type="button"
         onClick={() => setIsOpen((p) => !p)}
-        className="flex w-full items-center justify-between rounded-xl border border-gray-300 px-3 py-2 text-left text-sm focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+        className="flex w-full items-center justify-between rounded-full border border-gray-300 px-3 py-2 text-left text-sm focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
       >
         <span className={selectedLabel ? "text-gray-900" : "text-gray-400"}>
           {selectedLabel || placeholder}
