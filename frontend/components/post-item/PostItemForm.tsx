@@ -15,9 +15,12 @@ const CATEGORY_OPTIONS: Record<Condition, string[]> = {
   byproduct: ["Kulit Bawang", "Ampas Kopi", "Jelantah", "Cangkang Telur", "Lainnya"],
 };
 
+type ListingType = "diskon" | "donasi" | "";
+
 interface FormState {
   name: string;
   condition: Condition;
+  listingType: ListingType;
   quantity: string;
   unit: string;
   description: string;
@@ -32,6 +35,7 @@ interface FormState {
 const INITIAL_STATE: FormState = {
   name: "",
   condition: "layak_makan",
+  listingType: "",
   quantity: "",
   unit: "kg",
   description: "",
@@ -94,6 +98,16 @@ export default function PostItemForm() {
       return;
     }
 
+    if (isMakanan && !form.listingType) {
+      setError("Pilih dulu mau Jual Diskon atau Donasi.");
+      return;
+    }
+
+    if (isMakanan && form.listingType === "diskon" && !form.priceSale) {
+      setError("Harga jual wajib diisi untuk listing jual diskon.");
+      return;
+    }
+
     if (
       isMakanan &&
       form.priceOriginal &&
@@ -109,6 +123,7 @@ export default function PostItemForm() {
       const fd = new FormData();
       fd.append("name", form.name);
       fd.append("condition", form.condition);
+      if (isMakanan && form.listingType) fd.append("listing_type", form.listingType);
       fd.append("quantity_total", form.quantity);
       fd.append("unit", form.unit);
       fd.append("description", form.description);
@@ -196,6 +211,7 @@ export default function PostItemForm() {
                 onChange={(v) => {
                   updateField("condition", v as Condition);
                   updateField("category", "");
+                  updateField("listingType", "");
                 }}
                 options={[
                   { label: "Masih Layak Dimakan", value: "layak_makan" },
@@ -309,38 +325,59 @@ export default function PostItemForm() {
 
             {isMakanan ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Harga Asli</label>
-                    <div className="flex items-center rounded-xl border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
-                      <span className="pl-3 text-sm text-gray-500">Rp</span>
-                      <input
-                        type="number"
-                        min={0}
-                        autoComplete="off"
-                        value={form.priceOriginal}
-                        onChange={(e) => updateField("priceOriginal", e.target.value)}
-                        placeholder="12000"
-                        className="w-full rounded-xl px-2 py-2 text-sm text-gray-900 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Harga Jual</label>
-                    <div className="flex items-center rounded-xl border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
-                      <span className="pl-3 text-sm text-gray-500">Rp</span>
-                      <input
-                        type="number"
-                        min={0}
-                        autoComplete="off"
-                        value={form.priceSale}
-                        onChange={(e) => updateField("priceSale", e.target.value)}
-                        placeholder="7000"
-                        className="w-full rounded-xl px-2 py-2 text-sm text-gray-900 focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Jenis Listing</label>
+                  <SelectField
+                    value={form.listingType}
+                    onChange={(v) => updateField("listingType", v as ListingType)}
+                    options={[
+                      { label: "Jual Diskon", value: "diskon" },
+                      { label: "Donasi", value: "donasi" },
+                    ]}
+                    placeholder="Pilih Jual Diskon atau Donasi"
+                  />
                 </div>
+
+                {form.listingType === "diskon" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Harga Asli</label>
+                      <div className="flex items-center rounded-xl border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
+                        <span className="pl-3 text-sm text-gray-500">Rp</span>
+                        <input
+                          type="number"
+                          min={0}
+                          autoComplete="off"
+                          value={form.priceOriginal}
+                          onChange={(e) => updateField("priceOriginal", e.target.value)}
+                          placeholder="12000"
+                          className="w-full rounded-xl px-2 py-2 text-sm text-gray-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Harga Jual</label>
+                      <div className="flex items-center rounded-xl border border-gray-300 focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary">
+                        <span className="pl-3 text-sm text-gray-500">Rp</span>
+                        <input
+                          type="number"
+                          min={0}
+                          autoComplete="off"
+                          value={form.priceSale}
+                          onChange={(e) => updateField("priceSale", e.target.value)}
+                          placeholder="7000"
+                          className="w-full rounded-xl px-2 py-2 text-sm text-gray-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {form.listingType === "donasi" && (
+                  <div className="rounded-xl border border-dashed border-secondary-light bg-secondary-light/5 px-3 py-6 text-center text-sm text-secondary">
+                    Item donasi dikasih gratis ke penerima — nggak perlu isi harga.
+                  </div>
+                )}
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
