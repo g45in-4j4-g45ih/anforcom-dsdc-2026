@@ -452,3 +452,35 @@ export async function markKlaimPaid(klaimId: number, token: string): Promise<Kla
   }
   return res.json();
 }
+
+export interface StoreKlaim extends KlaimResponse {
+  peminat: number;
+  peminat_nama: string;
+  address_text: string;
+  address_lat: number | null;
+  address_lng: number | null;
+  notes: string;
+  paid_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+}
+
+export async function fetchStoreKlaims(token: string): Promise<StoreKlaim[]> {
+  const res = await fetch(`${API_BASE_URL}/api/klaim/store/`, {
+    headers: { Authorization: `Token ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, "Gagal memuat pesanan masuk."));
+  return res.json();
+}
+
+export async function markKlaimSelesai(klaimId: number, token: string): Promise<StoreKlaim> {
+  const res = await fetch(`${API_BASE_URL}/api/klaim/${klaimId}/tandai-selesai/`, {
+    method: "PATCH",
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal menandai pesanan selesai."));
+  }
+  return res.json();
+}

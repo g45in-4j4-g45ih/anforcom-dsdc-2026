@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { MapPin, MessageSquareText, PackageOpen, Pencil, TriangleAlert } from "lucide-react";
+import { ClipboardList, MapPin, MessageSquareText, PackageOpen, Pencil, TriangleAlert } from "lucide-react";
 import {
   fetchStoreByOwner,
   fetchStoreListings,
@@ -13,6 +13,7 @@ import {
 import ListingCard from "./listing/ListingCard";
 import RatingForm from "./rating/RatingForm";
 import RatingList from "./rating/RatingList";
+import StoreOrdersSection from "./store/StoreOrdersSection";
 
 interface StoreProfileProps {
   userId: string;
@@ -115,6 +116,16 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
           </Link>
         )}
       </div>
+
+      {isOwner && (
+        <div>
+          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+            <ClipboardList className="h-4 w-4 text-secondary" aria-hidden="true" />
+            Pesanan Masuk
+          </h2>
+          <StoreOrdersSection />
+        </div>
+      )}
 
       {store.description && (
         <p className="whitespace-pre-line rounded-2xl border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-600 shadow-sm">
