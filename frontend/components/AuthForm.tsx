@@ -35,7 +35,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       localStorage.setItem("auth_token", auth.token);
       localStorage.setItem("auth_user_id", String(auth.user.id));
-      router.push(`/store/${auth.user.id}`);
+
+      // Not every user has (or wants) a store - registering doesn't create
+      // one automatically, so we can't assume /store/{id} exists yet.
+      // Land on the homepage; "Toko" in the navbar covers store setup.
+      router.push("/materials");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi.");
     } finally {
