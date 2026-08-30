@@ -99,11 +99,14 @@ export default function Navbar({
 
   const isLoggedIn = userId !== null;
 
-  // "Listing" and "Dampakku" would go to /materials/mine and /impact/me,
-  // but neither page has been built yet (backend exists, frontend doesn't) -
-  // left out for now instead of linking somewhere that 404s. Your store's
-  // own listings are already visible on the Toko page below.
-  const accountItems: NavigationItem[] = [{ label: "Toko", href: myStoreHref }];
+  // "Listing" would go to /materials/mine, which still doesn't have a page
+  // built (that's a "my materials" management view, different from Dampakku)
+  // - left out for now. Your store's own listings are already visible on
+  // the Toko page below.
+  const accountItems: NavigationItem[] = [
+    { label: "Toko", href: myStoreHref },
+    { label: "Dampakku", href: "/impact/me" },
+  ];
 
   function handleLogout() {
     try {
@@ -206,8 +209,13 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Forum and Dampak (impact) have working APIs but no frontend
-              page yet - left out of the nav rather than linking to a 404 */}
+          <NavLink href="/forum" active={isActive("/forum")} className="text-sm">
+            Forum
+          </NavLink>
+
+          <NavLink href="/impact" active={isActive("/impact")} className="text-sm">
+            Dampak
+          </NavLink>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -318,6 +326,14 @@ export default function Navbar({
             </section>
 
             <div className="mt-5 space-y-1 border-t border-gray-100 pt-4">
+              <MobileMenuLink href="/forum" active={isActive("/forum")} onNavigate={closeMenu}>
+                Forum
+              </MobileMenuLink>
+
+              <MobileMenuLink href="/impact" active={isActive("/impact")} onNavigate={closeMenu}>
+                Dampak
+              </MobileMenuLink>
+
               <MobileMenuLink
                 href="/post-item"
                 active={isActive("/post-item")}

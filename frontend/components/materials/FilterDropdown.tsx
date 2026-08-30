@@ -18,6 +18,10 @@ interface FilterDropdownProps {
   name: string;
   defaultValue: string;
   options: FilterOption[];
+  // optional - lets a client component react to the selection directly
+  // instead of relying on a <form> submit/page reload (e.g. materials/forum
+  // pages don't pass this; impact's client-fetched history list does)
+  onChange?: (value: string) => void;
 }
 
 export default function FilterDropdown({
@@ -25,6 +29,7 @@ export default function FilterDropdown({
   name,
   defaultValue,
   options,
+  onChange,
 }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(defaultValue);
@@ -109,6 +114,7 @@ export default function FilterDropdown({
                 onClick={() => {
                   setSelectedValue(option.value);
                   setIsOpen(false);
+                  onChange?.(option.value);
                 }}
                 className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors ${
                   selected
