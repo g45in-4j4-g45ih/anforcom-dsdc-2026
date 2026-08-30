@@ -218,6 +218,7 @@ export interface ItemApiResponse {
   store: number;
   store_detail: {
     id: number;
+    owner: number;
     nama_toko: string;
     kontak_wa: string;
     lokasi: number | null;

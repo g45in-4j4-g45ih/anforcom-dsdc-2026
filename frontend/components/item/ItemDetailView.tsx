@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Clock3, MapPin, TriangleAlert } from "lucide-react";
 
-import Navbar from "@/components/navigation/Navbar"; 
-import RatingList from "../rating/RatingList"; // (Uncomment jika sudah dipakai)
+import Navbar from "@/components/navigation/Navbar";
+import RatingList from "../rating/RatingList";
+import RatingForm from "../rating/RatingForm";
 import { addToCart } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -28,6 +29,7 @@ export interface ItemDetailData {
 
 export interface ItemDetailStore {
   id: number;
+  owner: number;
   name: string;
   type: string;
   distanceLabel: string;
@@ -184,6 +186,18 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   const [mainIndex, setMainIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
+  const [ratingRefreshKey, setRatingRefreshKey] = useState(0);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setViewerId(localStorage.getItem("auth_user_id"));
+    } catch {
+      setViewerId(null);
+    }
+  }, []);
+
+  const isStoreOwner = viewerId !== null && Number(viewerId) === store.owner;
 
   const currentPrice = item.priceSale !== undefined ? item.priceSale : (item.priceOriginal !== undefined ? item.priceOriginal : 0);
 
@@ -373,9 +387,13 @@ export default function ItemDetailView({ item, store, related = [], recommended 
               </div>
             </div>
           ) : (
-            <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50/50 p-6">
-              {/* <RatingList storeId={store.id} /> */}
-              <p className="text-gray-500">Komponen Ulasan Disini...</p>
+            <div className="mt-6 space-y-4 rounded-2xl border border-gray-100 bg-gray-50/50 p-6">
+              <RatingList storeId={store.id} refreshKey={ratingRefreshKey} />
+              {isStoreOwner ? (
+                <p className="text-sm text-gray-400">Ini toko kamu sendiri, jadi nggak bisa dikasih rating.</p>
+              ) : (
+                <RatingForm storeId={store.id} onSubmitted={() => setRatingRefreshKey((k) => k + 1)} />
+              )}
             </div>
           )}
         </div>
