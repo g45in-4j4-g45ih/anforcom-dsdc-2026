@@ -28,10 +28,9 @@ interface NavigationItem {
 }
 
 const EXPLORE_ITEMS: NavigationItem[] = [
-  { label: "Semua", href: "/items" },
-  { label: "Diskon", href: "/items?type=diskon" },
-  { label: "Donasi", href: "/items?type=donasi" },
-  { label: "Material", href: "/materials" },
+  { label: "Jual Diskon", href: "/listing/diskon" },
+  { label: "Donasi", href: "/listing/donasi" },
+  { label: "Material Exchange", href: "/materials" },
 ];
 
 interface NavLinkProps {
@@ -100,11 +99,11 @@ export default function Navbar({
 
   const isLoggedIn = userId !== null;
 
-  const accountItems: NavigationItem[] = [
-    { label: "Toko", href: myStoreHref },
-    { label: "Listing", href: "/materials/mine" },
-    { label: "Dampakku", href: "/impact/me" },
-  ];
+  // "Listing" and "Dampakku" would go to /materials/mine and /impact/me,
+  // but neither page has been built yet (backend exists, frontend doesn't) -
+  // left out for now instead of linking somewhere that 404s. Your store's
+  // own listings are already visible on the Toko page below.
+  const accountItems: NavigationItem[] = [{ label: "Toko", href: myStoreHref }];
 
   function handleLogout() {
     try {
@@ -148,7 +147,7 @@ export default function Navbar({
   }
 
   const exploreIsActive =
-    isActive("/items") || isActive("/materials");
+    isActive("/listing") || isActive("/materials");
 
   function closeMenu() {
     setOpenMenu(null);
@@ -162,7 +161,7 @@ export default function Navbar({
         className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6"
       >
         <Link
-          href="/items"
+          href="/materials"
           prefetch={false}
           aria-label={`${brandName} - Jelajahi`}
           className="flex shrink-0 items-center gap-2 text-gray-900"
@@ -207,21 +206,8 @@ export default function Navbar({
             )}
           </div>
 
-          <NavLink
-            href="/forum"
-            active={isActive("/forum")}
-            className="text-sm"
-          >
-            Forum
-          </NavLink>
-
-          <NavLink
-            href="/impact"
-            active={isActive("/impact")}
-            className="text-sm"
-          >
-            Dampak
-          </NavLink>
+          {/* Forum and Dampak (impact) have working APIs but no frontend
+              page yet - left out of the nav rather than linking to a 404 */}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -332,22 +318,6 @@ export default function Navbar({
             </section>
 
             <div className="mt-5 space-y-1 border-t border-gray-100 pt-4">
-              <MobileMenuLink
-                href="/forum"
-                active={isActive("/forum")}
-                onNavigate={closeMenu}
-              >
-                Forum
-              </MobileMenuLink>
-
-              <MobileMenuLink
-                href="/impact"
-                active={isActive("/impact")}
-                onNavigate={closeMenu}
-              >
-                Dampak
-              </MobileMenuLink>
-
               <MobileMenuLink
                 href="/post-item"
                 active={isActive("/post-item")}
@@ -473,7 +443,7 @@ function DropdownMenu({
 function CartLink({ cartCount }: { cartCount: number }) {
   return (
     <Link
-      href="/checkout"
+      href="/cart"
       aria-label={
         cartCount > 0
           ? `Keranjang, ${cartCount} item`
