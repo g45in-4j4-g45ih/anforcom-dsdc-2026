@@ -25,6 +25,15 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
   const [ratingRefreshKey, setRatingRefreshKey] = useState(0);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setViewerId(localStorage.getItem("auth_user_id"));
+    } catch {
+      setViewerId(null);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -69,6 +78,8 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
     );
   }
 
+  const isOwner = viewerId !== null && Number(viewerId) === store.owner;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-4 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
@@ -94,13 +105,15 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
             </p>
           )}
         </div>
-        <Link
-          href={`/store/${userId}/edit`}
-          className="flex shrink-0 items-center gap-1.5 rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary-soft/30"
-        >
-          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-          Edit Toko
-        </Link>
+        {isOwner && (
+          <Link
+            href={`/store/${userId}/edit`}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary-soft/30"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+            Edit Toko
+          </Link>
+        )}
       </div>
 
       {store.description && (
@@ -134,7 +147,11 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
           <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <RatingList storeId={store.id} refreshKey={ratingRefreshKey} />
           </div>
-          <RatingForm storeId={store.id} onSubmitted={() => setRatingRefreshKey((k) => k + 1)} />
+          {isOwner ? (
+            <p className="text-sm text-gray-400">Ini toko kamu sendiri, jadi nggak bisa dikasih rating.</p>
+          ) : (
+            <RatingForm storeId={store.id} onSubmitted={() => setRatingRefreshKey((k) => k + 1)} />
+          )}
         </div>
       </div>
     </div>
