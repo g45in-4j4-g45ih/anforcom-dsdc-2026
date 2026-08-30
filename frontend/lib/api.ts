@@ -111,20 +111,26 @@ export interface ItemListing {
 }
 
 export async function fetchStoreByOwner(userId: number | string): Promise<StoreDetail | null> {
-  const res = await fetch(`${API_BASE_URL}/api/stores/?owner=${userId}`);
+  const res = await fetch(`${API_BASE_URL}/api/stores/?owner=${userId}`, { cache: "no-store" });
   if (!res.ok) return null;
   const data: StoreDetail[] = await res.json();
   return data[0] ?? null;
 }
 
 export async function fetchStoreListings(storeId: number): Promise<ItemListing[]> {
-  const res = await fetch(`${API_BASE_URL}/api/items/?store=${storeId}`);
+  const res = await fetch(`${API_BASE_URL}/api/items/?store=${storeId}`, { cache: "no-store" });
   if (!res.ok) return [];
   return res.json();
 }
 
-export async function fetchListings(listingType: "diskon" | "donasi"): Promise<ItemListing[]> {
-  const res = await fetch(`${API_BASE_URL}/api/items/?listing_type=${listingType}`);
+export async function fetchListings(
+  listingType: "diskon" | "donasi",
+  status?: string
+): Promise<ItemListing[]> {
+  const params = new URLSearchParams({ listing_type: listingType });
+  if (status) params.set("status", status);
+
+  const res = await fetch(`${API_BASE_URL}/api/items/?${params.toString()}`, { cache: "no-store" });
   if (!res.ok) return [];
   return res.json();
 }

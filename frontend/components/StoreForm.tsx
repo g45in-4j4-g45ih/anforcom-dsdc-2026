@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ImagePlus, Store } from "lucide-react";
 import AddressForm, { AddressValue, EMPTY_ADDRESS } from "./AddressForm";
 import { createLocation, createStore, StoreDetail, updateStore } from "@/lib/api";
 
@@ -79,43 +80,49 @@ export default function StoreForm({ mode, initialStore }: StoreFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-4 rounded-2xl border border-gray-200 bg-white p-6">
-      <h1 className="text-lg font-semibold text-gray-900">
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto max-w-xl space-y-4 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8"
+    >
+      <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft/40 text-primary">
+          <Store className="h-4 w-4" aria-hidden="true" />
+        </span>
         {mode === "create" ? "Buka Toko Baru" : "Edit Profil Toko"}
       </h1>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Nama Toko</label>
+        <label className="mb-1.5 block text-sm font-medium text-gray-700">Nama Toko</label>
         <input
           type="text"
           autoComplete="off"
           value={namaToko}
           onChange={(e) => setNamaToko(e.target.value)}
           placeholder="Contoh: Toko Berkah"
-          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-light/30"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Nomor WhatsApp</label>
+        <label className="mb-1.5 block text-sm font-medium text-gray-700">Nomor WhatsApp</label>
         <input
           type="text"
           autoComplete="off"
           value={kontakWa}
           onChange={(e) => setKontakWa(e.target.value)}
           placeholder="08xxxxxxxxxx"
-          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-light/30"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Deskripsi</label>
+        <label className="mb-1.5 block text-sm font-medium text-gray-700">Deskripsi</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           placeholder="Ceritakan toko kamu jual apa aja..."
-          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-light/30"
         />
       </div>
 
@@ -127,13 +134,14 @@ export default function StoreForm({ mode, initialStore }: StoreFormProps) {
       <AddressForm value={address} onChange={setAddress} />
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Logo Toko (opsional)</label>
+        <label className="mb-1.5 block text-sm font-medium text-gray-700">Logo Toko (opsional)</label>
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50"
+          className="flex items-center gap-2 rounded-xl border border-dashed border-secondary-light px-3 py-2.5 text-sm text-secondary transition hover:bg-secondary-light/10"
         >
+          <ImagePlus className="h-4 w-4" aria-hidden="true" />
           {logo ? logo.name : "Pilih file logo"}
         </button>
         {logoError && <p className="mt-1 text-xs text-red-600">{logoError}</p>}
@@ -144,7 +152,7 @@ export default function StoreForm({ mode, initialStore }: StoreFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+        className="w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light disabled:opacity-50"
       >
         {isSubmitting ? "Menyimpan..." : mode === "create" ? "Buka Toko" : "Simpan Perubahan"}
       </button>
