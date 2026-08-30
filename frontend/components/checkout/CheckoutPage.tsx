@@ -353,7 +353,7 @@ export default function CheckoutPage({
               <p className="mb-3 text-sm font-semibold text-gray-900">Pembayaran QRIS</p>
               {store?.qris_image ? (
                 <img
-                  src={toAbsoluteMediaUrl(entry.item_image)}
+                  src={toAbsoluteMediaUrl(store.qris_image)}
                   alt="QRIS"
                   className="mx-auto h-56 w-56 rounded-xl border border-gray-100 object-contain"
                 />

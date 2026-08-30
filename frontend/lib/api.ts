@@ -123,6 +123,12 @@ export async function fetchStoreListings(storeId: number): Promise<ItemListing[]
   return res.json();
 }
 
+export async function fetchListings(listingType: "diskon" | "donasi"): Promise<ItemListing[]> {
+  const res = await fetch(`${API_BASE_URL}/api/items/?listing_type=${listingType}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function fetchStoreById(storeId: number): Promise<StoreDetail | null> {
   const res = await fetch(`${API_BASE_URL}/api/stores/${storeId}/`, { cache: "no-store" });
   if (!res.ok) return null;
