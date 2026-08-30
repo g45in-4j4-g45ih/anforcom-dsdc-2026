@@ -226,6 +226,7 @@ export interface ItemApiResponse {
   status: string;
   images: ItemImageResponse[];
   created_at: string;
+  related_items?: ItemListing[];
 }
 
 export async function getItem(id: string | number): Promise<ItemApiResponse | null> {
@@ -350,4 +351,97 @@ export async function removeCartItem(cartItemId: number, token: string) {
     headers: { Authorization: `Token ${token}` },
   });
   if (!res.ok) throw new Error("Gagal menghapus item dari keranjang.");
+}
+
+export interface KlaimResponse {
+  id: number;
+  item: number;
+  item_name: string;
+  item_image: string | null;
+  item_unit: string;
+  jumlah_diklaim: string;
+  status: string;
+  price_at_claim: number | null;
+  total_price: number;
+  pickup_method: string;
+  pickup_time: string | null;
+  shipping_cost: number;
+  store_qris: string | null;
+  store_kontak_wa: string;
+  created_at: string;
+}
+
+interface CheckoutPayload {
+  pickup_method: "Self Pickup" | "Ojek";
+  pickup_time?: string;
+  address_text?: string;
+  address_lat?: number;
+  address_lng?: number;
+  shipping_cost?: number;
+  notes?: string;
+}
+
+export async function checkoutSingleItem(
+  itemId: number,
+  jumlah: number,
+  payload: CheckoutPayload,
+  token: string
+): Promise<KlaimResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/items/${itemId}/checkout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ jumlah, ...payload }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal checkout."));
+  }
+  return res.json();
+}
+
+export async function cartCheckout(
+  storeId: number,
+  cartItemIds: number[],
+  payload: CheckoutPayload,
+  token: string
+): Promise<KlaimResponse[]> {
+  const res = await fetch(`${API_BASE_URL}/api/cart/checkout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({
+      store_id: storeId,
+      cart_item_ids: cartItemIds,
+      ...payload,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal checkout."));
+  }
+  return res.json();
+}
+
+export async function markKlaimPaid(klaimId: number, token: string): Promise<KlaimResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/klaim/${klaimId}/mark-paid/`, {
+    method: "PATCH",
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Gagal konfirmasi pembayaran."));
+  }
+  return res.json();
+}
+
+export async function fetchRecommendedItems(): Promise<ItemListing[]> {
+  const res = await fetch(`${API_BASE_URL}/api/items/`, { cache: "no-store" });
+  if (!res.ok) return [];
+  
+  const data = await res.json();
+  const items = Array.isArray(data) ? data : (data.results ?? []);
+  
+  return items.slice(0, 4); 
 }
