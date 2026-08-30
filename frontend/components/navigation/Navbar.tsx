@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { fetchStoreByOwner } from "@/lib/api";
 
 type OpenMenu = "explore" | "account" | "mobile" | null;
 
@@ -70,22 +71,37 @@ export default function Navbar({
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [myStoreHref, setMyStoreHref] = useState(storeHref);
   const navigationRef = useRef<HTMLElement>(null);
 
   // Re-checked on every mount - Navbar isn't in the root layout, so it
   // remounts on each page navigation and picks up login/logout right away.
   useEffect(() => {
+    let cancelled = false;
+    let id: string | null = null;
     try {
-      setUserId(localStorage.getItem("auth_user_id"));
+      id = localStorage.getItem("auth_user_id");
     } catch {
-      setUserId(null);
+      id = null;
     }
+    setUserId(id);
+    if (!id) return;
+
+    // registering doesn't create a Store - only /store/setup does - so we
+    // can't just assume /store/{userId} exists for every logged-in user
+    fetchStoreByOwner(id).then((store) => {
+      if (!cancelled) setMyStoreHref(store ? `/store/${id}` : "/store/setup");
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const isLoggedIn = userId !== null;
 
   const accountItems: NavigationItem[] = [
-    { label: "Toko", href: userId ? `/store/${userId}` : storeHref },
+    { label: "Toko", href: myStoreHref },
     { label: "Listing", href: "/materials/mine" },
     { label: "Dampakku", href: "/impact/me" },
   ];
