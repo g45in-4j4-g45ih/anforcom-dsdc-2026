@@ -1,4 +1,4 @@
-import { ArrowUpRight, MessageCircle } from "lucide-react";
+import { ArrowUpRight, MessageCircle, Store } from "lucide-react";
 import Link from "next/link";
 import MaterialImage from "@/components/materials/MaterialImage";
 import { ItemListing } from "@/lib/api";
@@ -78,8 +78,20 @@ export default function ListingCard({ item }: ListingCardProps) {
         </div>
       </Link>
 
+      {item.store_detail && (
+        <div className="px-3 sm:px-4">
+          <Link
+            href={`/store/${item.store_detail.owner}`}
+            className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-primary hover:underline sm:text-xs"
+          >
+            <Store className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span className="truncate">{item.store_detail.nama_toko}</span>
+          </Link>
+        </div>
+      )}
+
       {waLink && (
-        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+        <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
           <a
             href={waLink}
             target="_blank"

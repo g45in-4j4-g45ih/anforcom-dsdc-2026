@@ -317,17 +317,19 @@ export default function ItemDetailView({ item, store, related = [], recommended 
               </div>
 
               <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                {store.profileImage ? (
-                  <img src={store.profileImage} alt={store.name} className="h-12 w-12 shrink-0 rounded-full border border-gray-100 object-cover" />
-                ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-lg font-bold text-pink-600">
-                    {store.name.charAt(0).toUpperCase()}
+                <Link href={`/store/${store.owner}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  {store.profileImage ? (
+                    <img src={store.profileImage} alt={store.name} className="h-12 w-12 shrink-0 rounded-full border border-gray-100 object-cover" />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-lg font-bold text-pink-600">
+                      {store.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-bold text-gray-900 hover:underline">{store.name}</p>
+                    <p className="truncate text-xs text-gray-500">{store.type} • {store.distanceLabel}</p>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-bold text-gray-900">{store.name}</p>
-                  <p className="truncate text-xs text-gray-500">{store.type} • {store.distanceLabel}</p>
-                </div>
+                </Link>
                 <button
                   type="button"
                   onClick={handleWhatsAppConnect}
