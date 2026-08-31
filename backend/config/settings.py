@@ -174,5 +174,17 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://anforcom-dsdc-2026-.*\.vercel\.app$",
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
