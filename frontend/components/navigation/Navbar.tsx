@@ -62,7 +62,7 @@ function NavLink({
 }
 
 export default function Navbar({
-  brandName = "GunaLagi",
+  brandName = "Selamat.in",
   storeHref = "/store/setup",
   cartCount = 0,
 }: NavbarProps) {

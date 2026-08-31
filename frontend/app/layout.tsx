@@ -6,8 +6,7 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "DSDC Anforcom",
-  description: "Circular Economy for Eco-Health Cities",
+  title: "Selamat.in",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
