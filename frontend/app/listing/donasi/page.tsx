@@ -14,7 +14,7 @@ export default function ListingDonasiPage() {
           listingType="donasi"
           title="Donasi"
           description="Makanan masih layak konsumsi, dibagikan gratis ke siapa saja yang butuh."
-          emptyMessage="Belum ada listing donasi yang sesuai filter saat ini."
+          emptyMessage="Belum ada listing donasi yang tersedia saat ini."
         />
       </main>
     </div>
