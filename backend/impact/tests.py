@@ -164,7 +164,7 @@ class ImpactAPITests(APITestCase):
         self.assertEqual(
             Decimal(
                 str(
-                    by_path["material_exchange"]["total_kg"]
+                    by_path["byproduct"]["total_kg"]
                 )
             ),
             Decimal("4.00"),
@@ -375,7 +375,7 @@ class ImpactAPITests(APITestCase):
 
         path_response = self.client.get(
             reverse("impact-history"),
-            {"path": "material_exchange"},
+            {"path": "byproduct"},
         )
         category_response = self.client.get(
             reverse("impact-history"),
@@ -386,7 +386,7 @@ class ImpactAPITests(APITestCase):
         self.assertEqual(path_response.data["count"], 1)
         self.assertEqual(
             path_response.data["results"][0]["path"],
-            "material_exchange",
+            "byproduct",
         )
 
         self.assertEqual(

@@ -9,7 +9,7 @@ interface RescuePathGridProps {
 const PATH_META: Record<RescuePath, { label: string; icon: typeof Tag }> = {
   jual_diskon: { label: "Jual Diskon", icon: Tag },
   donasi: { label: "Donasi", icon: Gift },
-  material_exchange: { label: "Material Exchange", icon: Recycle },
+  byproduct: { label: "Byproduct", icon: Recycle },
 };
 
 function formatMeasurement(measurement: ImpactMeasurement) {

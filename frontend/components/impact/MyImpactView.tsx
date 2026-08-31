@@ -17,7 +17,7 @@ const PATH_FILTER_OPTIONS = [
   { label: "Semua jalur", value: "" },
   { label: "Jual Diskon", value: "jual_diskon" },
   { label: "Donasi", value: "donasi" },
-  { label: "Material Exchange", value: "material_exchange" },
+  { label: "Byproduct", value: "byproduct" },
 ];
 
 export default function MyImpactView() {

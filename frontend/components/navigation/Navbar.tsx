@@ -30,7 +30,7 @@ interface NavigationItem {
 const EXPLORE_ITEMS: NavigationItem[] = [
   { label: "Jual Diskon", href: "/listing/diskon" },
   { label: "Donasi", href: "/listing/donasi" },
-  { label: "Material Exchange", href: "/materials" },
+  { label: "Byproduct", href: "/materials" },
 ];
 
 interface NavLinkProps {

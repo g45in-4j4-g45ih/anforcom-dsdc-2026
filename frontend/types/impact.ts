@@ -1,4 +1,4 @@
-export type RescuePath = "jual_diskon" | "donasi" | "material_exchange";
+export type RescuePath = "jual_diskon" | "donasi" | "byproduct";
 
 export interface ImpactMeasurement {
   // raw Decimal rendered by DRF's default JSONEncoder (not through a
