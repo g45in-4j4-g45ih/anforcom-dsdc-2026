@@ -10,8 +10,12 @@ TRACKED_UNITS = ("kg", "liter")
 RESCUE_PATHS = (
     "jual_diskon",
     "donasi",
-    "material_exchange",
+    "byproduct",
 )
+
+RESCUE_PATH_ALIASES = {
+    "material_exchange": "byproduct",
+}
 
 
 def completed_claims():
@@ -39,7 +43,7 @@ def filter_history_claims(claims, filters):
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
 
-    if path == "material_exchange":
+    if path == "byproduct":
         claims = claims.filter(
             item__condition=Item.Condition.BYPRODUCT,
         )
@@ -70,7 +74,7 @@ def filter_history_claims(claims, filters):
 
 def rescue_path(item):
     if item.condition == Item.Condition.BYPRODUCT:
-        return "material_exchange"
+        return "byproduct"
     if item.listing_type == Item.ListingType.DISKON:
         return "jual_diskon"
     if item.listing_type == Item.ListingType.DONASI:

@@ -38,7 +38,7 @@ class ImpactAPITests(APITestCase):
             "unit": "kg",
             "description": "Item untuk pengujian impact.",
             "category": "Lainnya",
-            "status": Item.Status.TERSEDIA_SEBAGIAN,
+            "status": Item.Status.TERSEDIA,
         }
         data.update(overrides)
         return Item.objects.create(**data)
@@ -121,7 +121,7 @@ class ImpactAPITests(APITestCase):
         self.create_claim(
             ignored_item,
             "100.00",
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
         )
         self.create_claim(
             ignored_item,
@@ -164,7 +164,7 @@ class ImpactAPITests(APITestCase):
         self.assertEqual(
             Decimal(
                 str(
-                    by_path["material_exchange"]["total_kg"]
+                    by_path["byproduct"]["total_kg"]
                 )
             ),
             Decimal("4.00"),
@@ -195,9 +195,11 @@ class ImpactAPITests(APITestCase):
     def test_my_impact_requires_authentication(self):
         response = self.client.get(reverse("my-impact"))
 
+        # 401, not 403 - now that TokenAuthentication is configured project-wide,
+        # DRF challenges the request instead of just forbidding it
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_my_impact_returns_zero_state(self):
@@ -264,7 +266,7 @@ class ImpactAPITests(APITestCase):
         self.create_claim(
             poster_item,
             "100.00",
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
         )
 
         self.client.force_authenticate(user=self.owner)
@@ -295,9 +297,11 @@ class ImpactAPITests(APITestCase):
     def test_impact_history_requires_authentication(self):
         response = self.client.get(reverse("impact-history"))
 
+        # 401, not 403 - now that TokenAuthentication is configured project-wide,
+        # DRF challenges the request instead of just forbidding it
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_impact_history_only_returns_completed_user_transactions(self):
@@ -342,7 +346,7 @@ class ImpactAPITests(APITestCase):
         self.create_claim(
             poster_item,
             "100.00",
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
         )
 
         self.client.force_authenticate(user=self.owner)
@@ -371,7 +375,7 @@ class ImpactAPITests(APITestCase):
 
         path_response = self.client.get(
             reverse("impact-history"),
-            {"path": "material_exchange"},
+            {"path": "byproduct"},
         )
         category_response = self.client.get(
             reverse("impact-history"),
@@ -382,7 +386,7 @@ class ImpactAPITests(APITestCase):
         self.assertEqual(path_response.data["count"], 1)
         self.assertEqual(
             path_response.data["results"][0]["path"],
-            "material_exchange",
+            "byproduct",
         )
 
         self.assertEqual(
@@ -393,6 +397,25 @@ class ImpactAPITests(APITestCase):
         self.assertEqual(
             category_response.data["results"][0]["category"],
             "Minuman",
+        )
+
+    def test_impact_history_accepts_legacy_material_exchange_path(self):
+        self.seed_completed_claims()
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.get(
+            reverse("impact-history"),
+            {"path": "material_exchange"},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(
+            response.data["results"][0]["path"],
+            "byproduct",
         )
 
     def test_impact_history_filters_period(self):
