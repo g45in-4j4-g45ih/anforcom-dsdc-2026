@@ -399,6 +399,25 @@ class ImpactAPITests(APITestCase):
             "Minuman",
         )
 
+    def test_impact_history_accepts_legacy_material_exchange_path(self):
+        self.seed_completed_claims()
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.get(
+            reverse("impact-history"),
+            {"path": "material_exchange"},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(
+            response.data["results"][0]["path"],
+            "byproduct",
+        )
+
     def test_impact_history_filters_period(self):
         old_item = self.create_item(name="History Lama")
         recent_item = self.create_item(name="History Baru")

@@ -13,6 +13,10 @@ RESCUE_PATHS = (
     "byproduct",
 )
 
+RESCUE_PATH_ALIASES = {
+    "material_exchange": "byproduct",
+}
+
 
 def completed_claims():
     return (
