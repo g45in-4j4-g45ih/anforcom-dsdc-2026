@@ -167,8 +167,13 @@ MAILERS = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://anforcom-dsdc-2026.vercel.app"
+    "https://anforcom-dsdc-2026.vercel.app",
 ]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://anforcom-dsdc-2026-.*\.vercel\.app$",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     "accept",

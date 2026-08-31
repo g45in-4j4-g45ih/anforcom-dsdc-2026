@@ -14,7 +14,7 @@ export default function ListingDiskonPage() {
           listingType="diskon"
           title="Jual Diskon"
           description="Makanan masih layak konsumsi, dijual murah sebelum kelewat waktu ambilnya."
-          emptyMessage="Belum ada listing diskon yang sesuai filter saat ini."
+          emptyMessage="Belum ada listing diskon yang tersedia saat ini."
         />
       </main>
     </div>

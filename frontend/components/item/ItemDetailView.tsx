@@ -522,22 +522,24 @@ export default function ItemDetailView({
               {/* TAMPILAN PROFIL TOKO */}
               <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-3">
-                  {store.profileImage ? (
-                    <img src={store.profileImage} alt={store.name} className="h-12 w-12 shrink-0 rounded-full border border-gray-100 object-cover" />
-                  ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-lg font-bold text-pink-600">
-                      {store.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-bold text-gray-900">{store.name}</p>
-                    {store.location && (
-                      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-gray-500">
-                        <MapPin className="h-3.5 w-3.5 shrink-0 text-pink-500" aria-hidden="true" />
-                        <span className="truncate">{store.location}</span>
-                      </p>
+                  <Link href={`/store/${store.owner}`} className="flex min-w-0 flex-1 items-center gap-3">
+                    {store.profileImage ? (
+                      <img src={store.profileImage} alt={store.name} className="h-12 w-12 shrink-0 rounded-full border border-gray-100 object-cover" />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-lg font-bold text-pink-600">
+                        {store.name.charAt(0).toUpperCase()}
+                      </div>
                     )}
-                  </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-bold text-gray-900 hover:underline">{store.name}</p>
+                      {store.location && (
+                        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-gray-500">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-pink-500" aria-hidden="true" />
+                          <span className="truncate">{store.location}</span>
+                        </p>
+                      )}
+                    </div>
+                  </Link>
                   <button
                     type="button"
                     onClick={handleWhatsAppConnect}
@@ -640,8 +642,15 @@ export default function ItemDetailView({
               </div>
             </div>
           ) : (
-            <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50/50 p-6">
-              <RatingList storeId={store.id} />
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-6">
+                <RatingList storeId={store.id} refreshKey={ratingRefreshKey} />
+              </div>
+              {isStoreOwner ? (
+                <p className="text-sm text-gray-400">Ini toko kamu sendiri, jadi nggak bisa dikasih rating.</p>
+              ) : (
+                <RatingForm storeId={store.id} onSubmitted={() => setRatingRefreshKey((k) => k + 1)} />
+              )}
             </div>
           )}
         </div>
