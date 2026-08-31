@@ -226,10 +226,6 @@ export default function ItemDetailView({ item, store, related = [], recommended 
       toast.error(err instanceof Error ? err.message : "Gagal menambah ke keranjang.");
     }
   }
-  
-  function handleBuyNow() {
-    router.push(`/checkout/${store.id}?itemId=${item.id}&quantity=${quantity}`);
-  }
 
   return (
     // Background Light Pink/Beige
@@ -341,14 +337,15 @@ export default function ItemDetailView({ item, store, related = [], recommended 
               </div>
 
               <div className="space-y-2">
-                <button type="button" onClick={handleAddToCart} className="w-full rounded-full border border-secondary py-2.5 text-sm font-medium text-secondary hover:bg-secondary-light/10">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="w-full rounded-full border border-secondary py-2.5 text-sm font-medium text-secondary hover:bg-secondary-light/10"
+                >
                   Tambahkan ke Keranjang
                 </button>
-                <button type="button" onClick={handleBuyNow} className="w-full rounded-full bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-light">
-                  Beli Sekarang
-                </button>
               </div>
-            </div>  
+            </div>
           </div>
 
           <div className="my-8"><Divider /></div>
