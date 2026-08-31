@@ -8,13 +8,13 @@ interface ImpactHistoryListProps {
 const PATH_ICON: Record<RescuePath, typeof Tag> = {
   jual_diskon: Tag,
   donasi: Gift,
-  material_exchange: Recycle,
+  byproduct: Recycle,
 };
 
 const PATH_LABEL: Record<RescuePath, string> = {
   jual_diskon: "Jual Diskon",
   donasi: "Donasi",
-  material_exchange: "Material Exchange",
+  byproduct: "Byproduct",
 };
 
 const ROLE_LABEL = { poster: "Penjual", claimer: "Pengklaim" };

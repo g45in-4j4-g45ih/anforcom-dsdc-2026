@@ -1,5 +1,4 @@
 import { PackageOpen, TriangleAlert } from "lucide-react";
-import FilterDropdown from "@/components/materials/FilterDropdown";
 import ListingCard from "./ListingCard";
 import { fetchListings, ItemListing } from "@/lib/api";
 
@@ -8,18 +7,6 @@ interface ListingBrowseSectionProps {
   title: string;
   description: string;
   emptyMessage: string;
-  status: string;
-  basePath: string;
-}
-
-const STATUS_FILTER_OPTIONS = [
-  { label: "Semua yang tersedia", value: "" },
-  { label: "Tersedia", value: "Tersedia" },
-  { label: "Tersedia Sebagian", value: "Tersedia Sebagian" },
-];
-
-function isAvailable(item: ItemListing) {
-  return item.status === "Tersedia" || item.status === "Tersedia Sebagian";
 }
 
 export default async function ListingBrowseSection({
@@ -27,15 +14,12 @@ export default async function ListingBrowseSection({
   title,
   description,
   emptyMessage,
-  status,
-  basePath,
 }: ListingBrowseSectionProps) {
   let listings: ItemListing[] = [];
   let errorMessage: string | null = null;
 
   try {
-    const result = await fetchListings(listingType, status || undefined);
-    listings = status ? result : result.filter(isAvailable);
+    listings = await fetchListings(listingType, "Tersedia");
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : "Listing belum dapat dimuat.";
   }
@@ -47,30 +31,11 @@ export default async function ListingBrowseSection({
         <p className="mt-1 text-sm text-gray-500">{description}</p>
       </div>
 
-      <form
-        action={basePath}
-        className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
-      >
-        <div className="w-full sm:w-56">
-          <FilterDropdown
-            label="Status listing"
-            name="status"
-            defaultValue={status}
-            options={STATUS_FILTER_OPTIONS}
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="h-11 rounded-xl bg-secondary px-5 text-sm font-semibold text-white transition hover:bg-secondary/90"
-        >
-          Terapkan
-        </button>
-
-        {!errorMessage && (
-          <p className="ml-auto text-sm text-gray-500">{listings.length} listing ditemukan</p>
-        )}
-      </form>
+      {!errorMessage && (
+        <p className="mt-4 text-sm text-gray-500">
+          {listings.length} listing ditemukan
+        </p>
+      )}
 
       {errorMessage ? (
         <div role="alert" className="mt-6 rounded-2xl border border-red-100 bg-red-50 p-8 text-center">

@@ -3,22 +3,35 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Clock3, MapPin, TriangleAlert } from "lucide-react";
+import {
+  ArrowUpRight,
+  Clock3,
+  Flag,
+  MapPin,
+  TriangleAlert,
+} from "lucide-react";
 
-import Navbar from "@/components/navigation/Navbar"; 
-import RatingList from "../rating/RatingList"; 
-import { addToCart } from "@/lib/api";
+import Navbar from "@/components/navigation/Navbar";
+import RatingList from "../rating/RatingList";
+import RatingForm from "../rating/RatingForm";
+import { addToCart, reportItem } from "@/lib/api";
 import { toast } from "sonner";
 
 export interface ItemDetailData {
   id: number;
   name: string;
+  condition: "layak_makan" | "byproduct";
+  status: "Tersedia" | "Habis" | "Selesai" | "Kadaluarsa";
+  isReported: boolean;
   images: string[];
   badgeLabel: string;
   priceOriginal?: number;
   priceSale?: number;
   pickupStart: string;
   pickupEnd: string;
+  pickupDateStart: string | null;
+  pickupDateEnd: string | null;
+  pickupLocation: string | null;
   stock: number;
   unit: string;
   category: string;
@@ -215,13 +228,50 @@ function RelatedItemCard({ item }: { item: ItemDetailRelated }) {
 
 // --- MAIN EXPORT COMPONENT ---
 
-export default function ItemDetailView({ item, store, related = [], recommended = [] }: ItemDetailViewProps) {
+export default function ItemDetailView({
+  item,
+  store,
+  related = [],
+  recommended = [],
+}: ItemDetailViewProps) {
   const router = useRouter();
+
+  const isByproduct = item.condition === "byproduct";
+  const quantityStep =
+    item.unit === "kg" || item.unit === "liter" ? 0.1 : 1;
+  const initialQuantity =
+    item.stock > 0
+      ? Math.min(quantityStep, item.stock)
+      : quantityStep;
+  const isClaimable =
+    item.status === "Tersedia" &&
+    Number.isFinite(item.stock) &&
+    item.stock > 0;
+
+  const pickupDateLabel =
+    item.pickupDateStart && item.pickupDateEnd
+      ? item.pickupDateStart === item.pickupDateEnd
+        ? formatPickupDate(item.pickupDateStart)
+        : `${formatPickupDate(
+            item.pickupDateStart,
+          )} – ${formatPickupDate(item.pickupDateEnd)}`
+      : formatPickupDate(
+          item.pickupDateStart ?? item.pickupDateEnd,
+        );
+
   const [mainIndex, setMainIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
-  const [ratingRefreshKey, setRatingRefreshKey] = useState(0);
-  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [quantity, setQuantity] =
+    useState(initialQuantity);
+  const [activeTab, setActiveTab] =
+    useState<"details" | "reviews">("details");
+  const [ratingRefreshKey, setRatingRefreshKey] =
+    useState(0);
+  const [viewerId, setViewerId] =
+    useState<string | null>(null);
+  const [reportSubmitted, setReportSubmitted] =
+    useState(item.isReported);
+  const [isReporting, setIsReporting] =
+    useState(false);
 
   useEffect(() => {
     try {
@@ -239,6 +289,15 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   const discountPercent = hasDiscount
     ? Math.round((1 - item.priceSale! / item.priceOriginal!) * 100)
     : 0;
+
+  function updateQuantity(nextQuantity: number) {
+    const clampedQuantity = Math.min(
+      item.stock,
+      Math.max(quantityStep, nextQuantity),
+    );
+
+    setQuantity(Number(clampedQuantity.toFixed(2)));
+  }
     
   function handleWhatsAppConnect() {
     const message = `Halo ${store.name}, saya tertarik dengan "${item.name}" (${quantity} ${item.unit}).`;
@@ -246,6 +305,18 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   }
 
   async function handleAddToCart() {
+
+    if (
+      !isClaimable ||
+      quantity <= 0 ||
+      quantity > item.stock
+    ) {
+      toast.error(
+        "Item ini sudah tidak dapat ditambahkan ke keranjang.",
+      );
+      return;
+    }
+
     const token = localStorage.getItem("auth_token") ?? "";
     if (!token) {
       toast.error("Kamu harus login dulu buat nambah ke keranjang.");
@@ -260,9 +331,48 @@ export default function ItemDetailView({ item, store, related = [], recommended 
       toast.error(err instanceof Error ? err.message : "Gagal menambah ke keranjang.");
     }
   }
-  
-  function handleBuyNow() {
-    router.push(`/checkout/${store.id}?itemId=${item.id}&quantity=${quantity}`);
+
+  async function handleReport() {
+    if (isStoreOwner) {
+      toast.error(
+        "Kamu tidak dapat melaporkan item milik sendiri.",
+      );
+      return;
+    }
+
+    if (reportSubmitted || isReporting) {
+      return;
+    }
+
+    const token =
+      localStorage.getItem("auth_token") ?? "";
+
+    if (!token) {
+      router.push(
+        `/login?next=${encodeURIComponent(
+          `/items/${item.id}`,
+        )}`,
+      );
+      return;
+    }
+
+    setIsReporting(true);
+
+    try {
+      await reportItem(item.id, token);
+      setReportSubmitted(true);
+      toast.success(
+        "Laporan berhasil dikirim untuk ditinjau.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Laporan belum dapat dikirim.",
+      );
+    } finally {
+      setIsReporting(false);
+    }
   }
 
   return (
@@ -306,41 +416,104 @@ export default function ItemDetailView({ item, store, related = [], recommended 
             {/* Kolom Kanan: Detail & Actions */}
             <div className="flex flex-col space-y-5">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
-                <div className="mt-2 flex items-end gap-2">
-                 {hasDiscount && (
-                  <span className="text-sm font-medium text-gray-400 line-through">
-                      {formatRupiah(item.priceOriginal!)}
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {item.name}
+                </h1>
+
+                {!isByproduct && (
+                  <div className="mt-2 flex items-end gap-2">
+                    {hasDiscount && (
+                      <span className="text-sm font-medium text-gray-400 line-through">
+                        {formatRupiah(item.priceOriginal!)}
+                      </span>
+                    )}
+
+                    <span className="text-2xl font-black text-pink-600">
+                      {formatRupiah(currentPrice)}
                     </span>
-                  )}
-                  
-                  <span className="text-2xl font-black text-pink-600">
-                    {formatRupiah(currentPrice)}
-                  </span>
-                  
-                  {hasDiscount && (
-                    <span className="mb-1 rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
-                      -{discountPercent}%
-                    </span>
-                  )}
-                </div>
+
+                    {hasDiscount && (
+                      <span className="mb-1 rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                        -{discountPercent}%
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-sm font-medium text-green-800 border border-green-100">
-                <Clock3 className="h-4 w-4 text-green-600" />
-                Waktu pengambilan : {item.pickupStart} - {item.pickupEnd}
+              <div className="space-y-2 rounded-xl border border-green-100 bg-green-50 p-3 text-sm text-green-800">
+                <div className="flex items-center gap-2">
+                  <Clock3
+                    className="h-4 w-4 shrink-0 text-green-600"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    Jam pengambilan: {item.pickupStart} –{" "}
+                    {item.pickupEnd}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Clock3
+                    className="h-4 w-4 shrink-0 text-green-600"
+                    aria-hidden="true"
+                  />
+                  <span>Tanggal pengambilan: {pickupDateLabel}</span>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <MapPin
+                    className="mt-0.5 h-4 w-4 shrink-0 text-green-600"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    {item.pickupLocation ?? "Lokasi belum tersedia"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-green-100 pt-2">
+                  <span className="font-medium">Status listing</span>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold">
+                    {item.status}
+                  </span>
+                </div>
               </div>
 
               <Divider />
 
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-700">Kuantitas</span>
+                <span className="text-sm font-semibold text-gray-700">
+                  Kuantitas
+                </span>
+
                 <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-sm">
-                  <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-pink-50 hover:text-pink-600">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateQuantity(quantity - quantityStep)
+                    }
+                    disabled={
+                      !isClaimable || quantity <= quantityStep
+                    }
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-pink-50 hover:text-pink-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
                     −
                   </button>
-                  <span className="w-6 text-center text-sm font-bold text-gray-900">{quantity}</span>
-                  <button type="button" onClick={() => setQuantity((q) => Math.min(item.stock, q + 1))} className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-green-50 hover:text-green-600">
+
+                  <span className="min-w-10 text-center text-sm font-bold text-gray-900">
+                    {formatQuantity(quantity)}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateQuantity(quantity + quantityStep)
+                    }
+                    disabled={
+                      !isClaimable || quantity >= item.stock
+                    }
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-green-50 hover:text-green-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
                     +
                   </button>
                 </div>
@@ -382,14 +555,47 @@ export default function ItemDetailView({ item, store, related = [], recommended 
               </div>
 
               <div className="space-y-2">
-                <button type="button" onClick={handleAddToCart} className="w-full rounded-full border border-secondary py-2.5 text-sm font-medium text-secondary hover:bg-secondary-light/10">
-                  Tambahkan ke Keranjang
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!isClaimable}
+                  className="w-full rounded-full border border-secondary py-2.5 text-sm font-medium text-secondary hover:bg-secondary-light/10 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  {isClaimable
+                    ? isByproduct
+                      ? "Klaim via Keranjang"
+                      : "Tambahkan ke Keranjang"
+                    : "Tidak Dapat Diklaim"}
                 </button>
-                <button type="button" onClick={handleBuyNow} className="w-full rounded-full bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-light">
-                  Beli Sekarang
+
+                <button
+                  type="button"
+                  onClick={handleReport}
+                  disabled={
+                    reportSubmitted ||
+                    isReporting ||
+                    isStoreOwner
+                  }
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 py-2.5 text-sm font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  <Flag
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
+                  {isStoreOwner
+                    ? isByproduct
+                      ? "Material Milikmu"
+                      : "Item Milikmu"
+                    : reportSubmitted
+                      ? "Sudah Dilaporkan"
+                      : isReporting
+                        ? "Mengirim laporan..."
+                        : isByproduct
+                          ? "Laporkan Material"
+                          : "Laporkan Item"}
                 </button>
               </div>
-            </div>  
+            </div>
           </div>
 
           <div className="my-8"><Divider /></div>
@@ -402,7 +608,7 @@ export default function ItemDetailView({ item, store, related = [], recommended 
                 onClick={() => setActiveTab("details")} 
                 className={`border-b-2 pb-3 text-sm font-bold transition-colors ${activeTab === "details" ? "border-green-600 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
               >
-                Detail Produk
+                {isByproduct ? "Detail Material" : "Detail Produk"}
               </button>
               <button 
                 type="button" 
@@ -417,11 +623,15 @@ export default function ItemDetailView({ item, store, related = [], recommended 
           {activeTab === "details" ? (
             <div className="mt-6 space-y-4 text-sm">
               <div className="grid grid-cols-[160px_1fr] gap-2 rounded-lg bg-pink-50/50 px-4 py-3">
-                <span className="font-medium text-gray-500">Stok Tersedia</span>
+                <span className="font-medium text-gray-500">
+                  {isByproduct ? "Material Tersedia" : "Stok Tersedia"}
+                </span>
                 <span className="font-bold text-gray-900">{item.stock} {item.unit}</span>
               </div>
               <div className="grid grid-cols-[160px_1fr] gap-2 px-4">
-                <span className="font-medium text-gray-500">Kategori Produk</span>
+                <span className="font-medium text-gray-500">
+                  {isByproduct ? "Kategori Material" : "Kategori Produk"}
+                </span>
                 <span className="font-bold text-gray-900">{item.category}</span>
               </div>
               <div className="px-4 pt-2">

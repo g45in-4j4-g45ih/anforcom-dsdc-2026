@@ -103,7 +103,7 @@ export default function MaterialsHero() {
   return (
     <section
       aria-roledescription="carousel"
-      aria-label="Informasi Material Exchange"
+      aria-label="Informasi Byproduct"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocusCapture={() => setIsPaused(true)}

@@ -3,13 +3,7 @@ import ListingBrowseSection from "@/components/listing/ListingBrowseSection";
 
 export const dynamic = "force-dynamic";
 
-interface ListingDiskonPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-export default async function ListingDiskonPage({ searchParams }: ListingDiskonPageProps) {
-  const params = await searchParams;
-  const status = typeof params.status === "string" ? params.status : "";
+export default function ListingDiskonPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f6f1]">
@@ -21,8 +15,6 @@ export default async function ListingDiskonPage({ searchParams }: ListingDiskonP
           title="Jual Diskon"
           description="Makanan masih layak konsumsi, dijual murah sebelum kelewat waktu ambilnya."
           emptyMessage="Belum ada listing diskon yang sesuai filter saat ini."
-          status={status}
-          basePath="/listing/diskon"
         />
       </main>
     </div>

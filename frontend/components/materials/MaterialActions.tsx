@@ -23,10 +23,7 @@ interface MaterialActionsProps {
   isReported: boolean;
 }
 
-const CLAIMABLE_STATUSES: MaterialStatus[] = [
-  "Tersedia",
-  "Tersedia Sebagian",
-];
+const CLAIMABLE_STATUSES: MaterialStatus[] = ["Tersedia"];
 
 function formatQuantity(value: number) {
   return new Intl.NumberFormat("id-ID", {

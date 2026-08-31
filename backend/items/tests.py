@@ -83,13 +83,17 @@ class ItemClaimAPITests(APITestCase):
                 "item-checkout",
                 kwargs={"pk": item.pk},
             ),
-            {"jumlah": "2.50"},
+            {
+                "jumlah": "2.50",
+                "pickup_method": Klaim.PickupMethod.SELF_PICKUP,
+                "pickup_time": "10:00",
+            },
             format="json",
         )
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_200_OK,
+            status.HTTP_201_CREATED,
         )
 
         item.refresh_from_db()
@@ -101,7 +105,7 @@ class ItemClaimAPITests(APITestCase):
         )
         self.assertEqual(
             item.status,
-            Item.Status.TERSEDIA_SEBAGIAN,
+            Item.Status.TERSEDIA,
         )
         self.assertEqual(
             claim.jumlah_diklaim,
@@ -109,7 +113,7 @@ class ItemClaimAPITests(APITestCase):
         )
         self.assertEqual(
             claim.status,
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.DIBAYAR,
         )
 
     def test_invalid_claim_quantities_are_rejected(self):
@@ -188,6 +192,7 @@ class ItemClaimAPITests(APITestCase):
             item=item,
             peminat=self.claimer,
             jumlah_diklaim=Decimal("2.00"),
+            status=Klaim.StatusKlaim.DIBAYAR,
         )
         url = reverse(
             "klaim-tandai-selesai",
@@ -223,16 +228,37 @@ class ItemClaimAPITests(APITestCase):
         )
         self.assertIsNotNone(claim.completed_at)
 
-    def test_non_waiting_claim_cannot_be_completed(self):
+        completed_at = claim.completed_at
+
+        repeated_response = self.client.patch(
+            url,
+            format="json",
+        )
+
+        self.assertEqual(
+            repeated_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        claim.refresh_from_db()
+        item.refresh_from_db()
+
+        self.assertEqual(claim.completed_at, completed_at)
+        self.assertEqual(
+            item.status,
+            Item.Status.TERSEDIA,
+        )
+
+    def test_unpaid_or_cancelled_claim_cannot_be_completed(self):
         item = self.create_item()
         self.client.force_authenticate(user=self.owner)
 
-        non_waiting_statuses = [
-            Klaim.StatusKlaim.SELESAI,
+        invalid_statuses = [
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
             Klaim.StatusKlaim.BATAL,
         ]
 
-        for claim_status in non_waiting_statuses:
+        for claim_status in invalid_statuses:
             with self.subTest(claim_status=claim_status):
                 claim = Klaim.objects.create(
                     item=item,
@@ -260,6 +286,122 @@ class ItemClaimAPITests(APITestCase):
                     claim_status,
                 )
 
+    def test_empty_item_completes_after_all_active_claims_finish(self):
+        item = self.create_item(
+            quantity_remaining=Decimal("0.00"),
+            status=Item.Status.HABIS,
+        )
+        first_claim = Klaim.objects.create(
+            item=item,
+            peminat=self.claimer,
+            jumlah_diklaim=Decimal("4.00"),
+            status=Klaim.StatusKlaim.DIBAYAR,
+        )
+        second_claim = Klaim.objects.create(
+            item=item,
+            peminat=self.other_user,
+            jumlah_diklaim=Decimal("6.00"),
+            status=Klaim.StatusKlaim.DIBAYAR,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+
+        first_response = self.client.patch(
+            reverse(
+                "klaim-tandai-selesai",
+                kwargs={"klaim_id": first_claim.pk},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        item.refresh_from_db()
+        self.assertEqual(item.status, Item.Status.HABIS)
+
+        second_response = self.client.patch(
+            reverse(
+                "klaim-tandai-selesai",
+                kwargs={"klaim_id": second_claim.pk},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        item.refresh_from_db()
+        self.assertEqual(item.status, Item.Status.SELESAI)
+
+    def test_item_detail_exposes_report_status(self):
+        item = self.create_item()
+
+        response = self.client.get(
+            reverse("item-detail", kwargs={"pk": item.pk})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["is_reported"])
+
+    def test_report_item_requires_authentication(self):
+        item = self.create_item()
+
+        response = self.client.post(
+            reverse("item-report", kwargs={"pk": item.pk})
+        )
+
+        self.assertIn(
+            response.status_code,
+            [
+                status.HTTP_401_UNAUTHORIZED,
+                status.HTTP_403_FORBIDDEN,
+            ],
+        )
+        item.refresh_from_db()
+        self.assertFalse(item.is_reported)
+
+    def test_user_can_report_item_idempotently(self):
+        item = self.create_item()
+        self.client.force_authenticate(user=self.other_user)
+        report_url = reverse(
+            "item-report",
+            kwargs={"pk": item.pk},
+        )
+
+        first_response = self.client.post(report_url)
+        second_response = self.client.post(report_url)
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        item.refresh_from_db()
+        self.assertTrue(item.is_reported)
+
+    def test_owner_cannot_report_own_item(self):
+        item = self.create_item()
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.post(
+            reverse("item-report", kwargs={"pk": item.pk})
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        item.refresh_from_db()
+        self.assertFalse(item.is_reported)
 
 class StoreAPITests(APITestCase):
     def setUp(self):

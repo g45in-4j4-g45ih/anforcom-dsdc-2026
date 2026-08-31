@@ -97,6 +97,42 @@ class ItemDetailView(generics.RetrieveUpdateAPIView):
             return Item.objects.filter(store=self.request.user.store)
         return Item.objects.none()
 
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def report_item(request, pk):
+    item = generics.get_object_or_404(Item, pk=pk)
+
+    if item.store.owner_id == request.user.id:
+        return Response(
+            {
+                "error": (
+                    "Kamu tidak dapat melaporkan item "
+                    "milik sendiri."
+                )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if item.is_reported:
+        return Response(
+            {
+                "message": "Item sudah pernah dilaporkan.",
+                "is_reported": True,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    item.is_reported = True
+    item.save(update_fields=["is_reported", "updated_at"])
+
+    return Response(
+        {
+            "message": "Item berhasil dilaporkan.",
+            "is_reported": True,
+        },
+        status=status.HTTP_200_OK,
+    )
+
 # ===== Cart =====
  
 class CartListView(generics.ListAPIView):
@@ -324,23 +360,62 @@ def batal_klaim(request, klaim_id):
 @api_view(["PATCH"])
 @permission_classes([permissions.IsAuthenticated])
 def tandai_selesai(request, klaim_id):
-    klaim = generics.get_object_or_404(Klaim, pk=klaim_id)
-
-    if klaim.item.store.owner != request.user:
-        return Response({"error": "Bukan item milikmu."}, status=status.HTTP_403_FORBIDDEN)
-
-    if klaim.status == Klaim.StatusKlaim.SELESAI:
-        return Response({"error": "Klaim sudah selesai."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if klaim.status not in (Klaim.StatusKlaim.DIBAYAR,):
-        return Response(
-            {"error": "Klaim baru bisa ditandai selesai setelah dibayar."},
-            status=status.HTTP_400_BAD_REQUEST,
+    with transaction.atomic():
+        klaim = generics.get_object_or_404(
+            Klaim.objects.select_for_update().select_related(
+                "item__store"
+            ),
+            pk=klaim_id,
+        )
+        item = Item.objects.select_for_update().get(
+            pk=klaim.item_id
         )
 
-    klaim.status = Klaim.StatusKlaim.SELESAI
-    klaim.completed_at = timezone.now()
-    klaim.save(update_fields=["status", "completed_at"])
+        if item.store.owner_id != request.user.id:
+            return Response(
+                {"error": "Bukan item milikmu."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if klaim.status != Klaim.StatusKlaim.SELESAI:
+            if klaim.status != Klaim.StatusKlaim.DIBAYAR:
+                return Response(
+                    {
+                        "error": (
+                            "Klaim baru bisa ditandai selesai "
+                            "setelah dibayar."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            klaim.status = Klaim.StatusKlaim.SELESAI
+            klaim.completed_at = timezone.now()
+            klaim.save(
+                update_fields=["status", "completed_at"]
+            )
+
+        has_active_claims = item.klaim_list.exclude(
+            status__in=[
+                Klaim.StatusKlaim.SELESAI,
+                Klaim.StatusKlaim.BATAL,
+            ]
+        ).exists()
+
+        if item.quantity_remaining == 0:
+            next_item_status = (
+                Item.Status.HABIS
+                if has_active_claims
+                else Item.Status.SELESAI
+            )
+        else:
+            next_item_status = Item.Status.TERSEDIA
+
+        if item.status != next_item_status:
+            item.status = next_item_status
+            item.save(
+                update_fields=["status", "updated_at"]
+            )
 
     return Response(KlaimManagementSerializer(klaim).data)
 
