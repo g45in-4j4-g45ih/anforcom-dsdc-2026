@@ -332,6 +332,10 @@ export default function ItemDetailView({
     }
   }
 
+  function handleBuyNow() {
+    router.push(`/checkout/${store.id}?itemId=${item.id}&quantity=${quantity}`);
+  }
+
   async function handleReport() {
     if (isStoreOwner) {
       toast.error(
@@ -392,7 +396,7 @@ export default function ItemDetailView({
                   </span>
                 )}
                 {item.images[mainIndex] ? (
-                  <img src={item.images[mainIndex]} alt={item.name} className="h-full w-full object-cover" />
+                  <img src={resolveImageUrl(item.images[mainIndex])} alt={item.name} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
                     Belum ada foto
@@ -407,7 +411,8 @@ export default function ItemDetailView({
                     onClick={() => setMainIndex(idx)}
                     className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${idx === mainIndex ? "border-green-600 opacity-100" : "border-transparent opacity-60 hover:opacity-100"}`}
                   >
-                    <img src={src} alt={`${item.name} ${idx + 1}`} className="h-full w-full object-cover" />
+                    {/* Gunakan resolveImageUrl juga untuk thumbnail */}
+                    <img src={resolveImageUrl(src)} alt={`${item.name} ${idx + 1}`} className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -497,7 +502,7 @@ export default function ItemDetailView({
                     }
                     className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-pink-50 hover:text-pink-600 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    −
+                    -
                   </button>
 
                   <span className="min-w-10 text-center text-sm font-bold text-gray-900">
@@ -557,19 +562,15 @@ export default function ItemDetailView({
               </div>
 
               <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  disabled={!isClaimable}
-                  className="w-full rounded-full border border-secondary py-2.5 text-sm font-medium text-secondary hover:bg-secondary-light/10 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
-                >
-                  {isClaimable
-                    ? isByproduct
-                      ? "Klaim via Keranjang"
-                      : "Tambahkan ke Keranjang"
-                    : "Tidak Dapat Diklaim"}
-                </button>
-
+                <div className="space-y-2">
+                  <button type="button" onClick={handleAddToCart} className="w-full rounded-full border border-secondary py-2.5 text-sm font-medium text-secondary hover:bg-secondary-light/10">
+                    Tambahkan ke Keranjang
+                  </button>
+                  <button type="button" onClick={handleBuyNow} className="w-full rounded-full bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-light">
+                    Beli Sekarang
+                  </button>
+                </div>
+                
                 <button
                   type="button"
                   onClick={handleReport}
