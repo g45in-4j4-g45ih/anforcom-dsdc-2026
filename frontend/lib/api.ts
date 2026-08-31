@@ -198,18 +198,7 @@ export interface ItemImageResponse {
 export interface ItemApiResponse {
   id: number;
   store: number;
-  store_detail: {
-    id: number;
-    nama_toko: string;
-    kontak_wa: string;
-    lokasi: number | null;
-    lokasi_detail: {
-      id: number;
-      nama_lengkap: string;
-      latitude: number | null;
-      longitude: number | null;
-    } | null;
-  } | null;
+  store_detail: StoreDetail | null;
   name: string;
   condition: "layak_makan" | "byproduct";
   listing_type: "diskon" | "donasi" | null;

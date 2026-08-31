@@ -60,7 +60,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     reviewCount: ratingSummary.count,
     whatsappNumber: item.store_detail?.kontak_wa?.replace(/^0/, "62") ?? "",
     
-    location: item.store_detail?.lokasi_detail?.alamat || item.store_detail?.lokasi || "Lokasi belum tersedia",
+    location: item.store_detail?.lokasi_detail?.alamat || "Lokasi belum tersedia",
     description: item.store_detail?.description || "",
     profileImage: toAbsoluteUrl(item.store_detail?.logo),
   };
