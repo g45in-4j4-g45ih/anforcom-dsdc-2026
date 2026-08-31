@@ -1,23 +1,25 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/navigation/Navbar";
-import StoreForm from "@/components/StoreForm";
+import MyImpactView from "@/components/impact/MyImpactView";
 
-export default function StoreSetupPage() {
+export default function MyImpactPage() {
   return (
     <div className="min-h-screen bg-[#f8f6f1]">
       <Navbar />
 
-      <main className="mx-auto max-w-xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <Link
-          href="/materials"
+          href="/impact"
           className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Kembali
+          Kembali ke Dampak Bersama
         </Link>
 
-        <StoreForm mode="create" />
+        <h1 className="mb-6 text-xl font-bold text-gray-900 sm:text-2xl">Dampakku</h1>
+
+        <MyImpactView />
       </main>
     </div>
   );

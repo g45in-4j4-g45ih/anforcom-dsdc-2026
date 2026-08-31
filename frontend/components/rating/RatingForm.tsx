@@ -40,18 +40,23 @@ export default function RatingForm({ storeId, onSubmitted }: RatingFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200 bg-white p-4">
-      <label className="mb-1 block text-sm font-medium text-gray-700">Beri rating</label>
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
+    >
+      <label className="mb-1.5 block text-sm font-medium text-gray-700">Beri rating</label>
       <StarRating value={score} onChange={setScore} />
 
-      <label className="mb-1 mt-3 block text-sm font-medium text-gray-700">Ulasan (opsional)</label>
+      <label className="mb-1.5 mt-3 block text-sm font-medium text-gray-700">
+        Ulasan (opsional)
+      </label>
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         maxLength={1000}
         rows={3}
         placeholder="Ceritakan pengalamanmu..."
-        className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-light/30"
       />
 
       {error && (
@@ -61,7 +66,7 @@ export default function RatingForm({ storeId, onSubmitted }: RatingFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-3 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+        className="mt-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light disabled:opacity-50"
       >
         {isSubmitting ? "Mengirim..." : "Kirim Ulasan"}
       </button>

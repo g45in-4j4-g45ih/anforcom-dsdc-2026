@@ -55,6 +55,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
 
   const storeData: ItemDetailStore = {
     id: storeId,
+    owner: item.store_detail?.owner ?? -1,
     name: item.store_detail?.nama_toko ?? "Toko",
     rating: ratingSummary.average ?? 0,
     reviewCount: ratingSummary.count,

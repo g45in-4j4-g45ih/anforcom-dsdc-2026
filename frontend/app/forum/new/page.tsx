@@ -1,23 +1,23 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/navigation/Navbar";
-import StoreForm from "@/components/StoreForm";
+import NewThreadForm from "@/components/forum/NewThreadForm";
 
-export default function StoreSetupPage() {
+export default function NewThreadPage() {
   return (
     <div className="min-h-screen bg-[#f8f6f1]">
       <Navbar />
 
-      <main className="mx-auto max-w-xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
         <Link
-          href="/materials"
+          href="/forum"
           className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Kembali
+          Kembali ke Forum
         </Link>
 
-        <StoreForm mode="create" />
+        <NewThreadForm />
       </main>
     </div>
   );

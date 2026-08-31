@@ -10,8 +10,9 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { fetchStoreByOwner } from "@/lib/api";
 
 type OpenMenu = "explore" | "account" | "mobile" | null;
 
@@ -27,10 +28,9 @@ interface NavigationItem {
 }
 
 const EXPLORE_ITEMS: NavigationItem[] = [
-  { label: "Semua", href: "/items" },
-  { label: "Diskon", href: "/items?type=diskon" },
-  { label: "Donasi", href: "/items?type=donasi" },
-  { label: "Material", href: "/materials" },
+  { label: "Jual Diskon", href: "/listing/diskon" },
+  { label: "Donasi", href: "/listing/donasi" },
+  { label: "Material Exchange", href: "/materials" },
 ];
 
 interface NavLinkProps {
@@ -67,14 +67,58 @@ export default function Navbar({
   cartCount = 0,
 }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [myStoreHref, setMyStoreHref] = useState(storeHref);
   const navigationRef = useRef<HTMLElement>(null);
 
+  // Re-checked on every mount - Navbar isn't in the root layout, so it
+  // remounts on each page navigation and picks up login/logout right away.
+  useEffect(() => {
+    let cancelled = false;
+    let id: string | null = null;
+    try {
+      id = localStorage.getItem("auth_user_id");
+    } catch {
+      id = null;
+    }
+    setUserId(id);
+    if (!id) return;
+
+    // registering doesn't create a Store - only /store/setup does - so we
+    // can't just assume /store/{userId} exists for every logged-in user
+    fetchStoreByOwner(id).then((store) => {
+      if (!cancelled) setMyStoreHref(store ? `/store/${id}` : "/store/setup");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const isLoggedIn = userId !== null;
+
+  // "Listing" would go to /materials/mine, which still doesn't have a page
+  // built (that's a "my materials" management view, different from Dampakku)
+  // - left out for now. Your store's own listings are already visible on
+  // the Toko page below.
   const accountItems: NavigationItem[] = [
-    { label: "Toko", href: storeHref },
-    { label: "Listing", href: "/materials/mine" },
+    { label: "Toko", href: myStoreHref },
     { label: "Dampakku", href: "/impact/me" },
   ];
+
+  function handleLogout() {
+    try {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user_id");
+    } catch {
+      // localStorage nggak kebuka (private mode dll) - ga masalah, tetep lanjut
+    }
+    setUserId(null);
+    closeMenu();
+    router.push("/login");
+  }
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -106,7 +150,7 @@ export default function Navbar({
   }
 
   const exploreIsActive =
-    isActive("/items") || isActive("/materials");
+    isActive("/listing") || isActive("/materials");
 
   function closeMenu() {
     setOpenMenu(null);
@@ -120,7 +164,7 @@ export default function Navbar({
         className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6"
       >
         <Link
-          href="/items"
+          href="/materials"
           prefetch={false}
           aria-label={`${brandName} - Jelajahi`}
           className="flex shrink-0 items-center gap-2 text-gray-900"
@@ -165,19 +209,11 @@ export default function Navbar({
             )}
           </div>
 
-          <NavLink
-            href="/forum"
-            active={isActive("/forum")}
-            className="text-sm"
-          >
+          <NavLink href="/forum" active={isActive("/forum")} className="text-sm">
             Forum
           </NavLink>
 
-          <NavLink
-            href="/impact"
-            active={isActive("/impact")}
-            className="text-sm"
-          >
+          <NavLink href="/impact" active={isActive("/impact")} className="text-sm">
             Dampak
           </NavLink>
         </div>
@@ -195,30 +231,48 @@ export default function Navbar({
 
           <LanguageControl />
 
-          <div className="relative hidden md:block">
-            <button
-              type="button"
-              aria-label="Buka menu akun"
-              aria-haspopup="menu"
-              aria-expanded={openMenu === "account"}
-              onClick={() =>
-                setOpenMenu((current) =>
-                  current === "account" ? null : "account",
-                )
-              }
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-primary hover:text-primary"
-            >
-              <CircleUserRound className="h-5 w-5" aria-hidden="true" />
-            </button>
+          {isLoggedIn ? (
+            <div className="relative hidden md:block">
+              <button
+                type="button"
+                aria-label="Buka menu akun"
+                aria-haspopup="menu"
+                aria-expanded={openMenu === "account"}
+                onClick={() =>
+                  setOpenMenu((current) =>
+                    current === "account" ? null : "account",
+                  )
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-primary hover:text-primary"
+              >
+                <CircleUserRound className="h-5 w-5" aria-hidden="true" />
+              </button>
 
-            {openMenu === "account" && (
-              <DropdownMenu
-                items={accountItems}
-                align="right"
-                onNavigate={closeMenu}
-              />
-            )}
-          </div>
+              {openMenu === "account" && (
+                <DropdownMenu
+                  items={accountItems}
+                  align="right"
+                  onNavigate={closeMenu}
+                  onLogout={handleLogout}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="hidden items-center gap-2 md:flex">
+              <Link
+                href="/login"
+                className="rounded-full px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-primary"
+              >
+                Masuk
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-full border border-primary px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-soft/30"
+              >
+                Daftar
+              </Link>
+            </div>
+          )}
 
           <button
             type="button"
@@ -272,19 +326,11 @@ export default function Navbar({
             </section>
 
             <div className="mt-5 space-y-1 border-t border-gray-100 pt-4">
-              <MobileMenuLink
-                href="/forum"
-                active={isActive("/forum")}
-                onNavigate={closeMenu}
-              >
+              <MobileMenuLink href="/forum" active={isActive("/forum")} onNavigate={closeMenu}>
                 Forum
               </MobileMenuLink>
 
-              <MobileMenuLink
-                href="/impact"
-                active={isActive("/impact")}
-                onNavigate={closeMenu}
-              >
+              <MobileMenuLink href="/impact" active={isActive("/impact")} onNavigate={closeMenu}>
                 Dampak
               </MobileMenuLink>
 
@@ -313,16 +359,44 @@ export default function Navbar({
               </p>
 
               <div className="mt-2 space-y-1">
-                {accountItems.map((item) => (
-                  <MobileMenuLink
-                    key={item.label}
-                    href={item.href}
-                    active={isActive(item.href)}
-                    onNavigate={closeMenu}
-                  >
-                    {item.label}
-                  </MobileMenuLink>
-                ))}
+                {isLoggedIn ? (
+                  <>
+                    {accountItems.map((item) => (
+                      <MobileMenuLink
+                        key={item.label}
+                        href={item.href}
+                        active={isActive(item.href)}
+                        onNavigate={closeMenu}
+                      >
+                        {item.label}
+                      </MobileMenuLink>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="block w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                    >
+                      Keluar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <MobileMenuLink
+                      href="/login"
+                      active={isActive("/login")}
+                      onNavigate={closeMenu}
+                    >
+                      Masuk
+                    </MobileMenuLink>
+                    <MobileMenuLink
+                      href="/register"
+                      active={isActive("/register")}
+                      onNavigate={closeMenu}
+                    >
+                      Daftar
+                    </MobileMenuLink>
+                  </>
+                )}
               </div>
             </section>
           </div>
@@ -336,12 +410,14 @@ interface DropdownMenuProps {
   items: NavigationItem[];
   onNavigate: () => void;
   align?: "left" | "right";
+  onLogout?: () => void;
 }
 
 function DropdownMenu({
   items,
   onNavigate,
   align = "left",
+  onLogout,
 }: DropdownMenuProps) {
   return (
     <div
@@ -362,6 +438,20 @@ function DropdownMenu({
           {item.label}
         </Link>
       ))}
+
+      {onLogout && (
+        <>
+          <div className="my-1 border-t border-gray-100" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={onLogout}
+            className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+          >
+            Keluar
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -369,7 +459,7 @@ function DropdownMenu({
 function CartLink({ cartCount }: { cartCount: number }) {
   return (
     <Link
-      href="/checkout"
+      href="/cart"
       aria-label={
         cartCount > 0
           ? `Keranjang, ${cartCount} item`
