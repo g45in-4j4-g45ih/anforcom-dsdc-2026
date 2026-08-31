@@ -167,6 +167,11 @@ MAILERS = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://anforcom-dsdc-2026.vercel.app",
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://anforcom-dsdc-2026-.*\.vercel\.app$",
 ]
 
 MEDIA_URL = "/media/"
