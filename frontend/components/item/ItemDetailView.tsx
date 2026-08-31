@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Clock3, MapPin, TriangleAlert } from "lucide-react";
 
-import Navbar from "@/components/navigation/Navbar";
-import RatingList from "../rating/RatingList";
-import RatingForm from "../rating/RatingForm";
+import Navbar from "@/components/navigation/Navbar"; 
+import RatingList from "../rating/RatingList"; 
 import { addToCart } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -31,12 +30,12 @@ export interface ItemDetailStore {
   id: number;
   owner: number;
   name: string;
-  type: string;
-  distanceLabel: string;
+  location?: string; 
+  description?: string; 
   rating: number;
   reviewCount: number;
   whatsappNumber: string;
-  profileImage?: string;
+  profileImage?: string; 
 }
 
 export interface ItemDetailRelated {
@@ -120,17 +119,52 @@ function WhatsAppIcon({ className, color = "#25D366" }: { className?: string; co
   );
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function resolveImageUrl(path: unknown): string {
+  if (!path) return "";
+  if (typeof path === "string") {
+    return path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
+  }
+  if (typeof path === "object" && "image" in (path as Record<string, unknown>)) {
+    return resolveImageUrl((path as { image: unknown }).image);
+  }
+  if (typeof path === "object" && "url" in (path as Record<string, unknown>)) {
+    return resolveImageUrl((path as { url: unknown }).url);
+  }
+  return "";
+}
+
+function getRelatedImageUrl(item: ItemDetailRelated): string {
+  if (item.image) return resolveImageUrl(item.image);
+
+  const imagesArray = (item as unknown as { images?: unknown[] }).images;
+  if (Array.isArray(imagesArray) && imagesArray.length > 0) {
+    return resolveImageUrl(imagesArray[0]);
+  }
+
+  return "";
+}
+
 function RelatedItemCard({ item }: { item: ItemDetailRelated }) {
   const limitedStock = hasLimitedStock(item);
+  const imageUrl = getRelatedImageUrl(item);
 
   return (
     <Link
       href={`/items/${item.id}`}
       aria-label={`Lihat detail ${item.name}`}
-      className="group flex w-[240px] sm:w-[260px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-pink-400 hover:shadow-lg"
+      className="group flex w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-pink-400 hover:shadow-lg"
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-gray-50">
-        <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-50">
+        {imageUrl ? (
+          <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gray-100 text-xs text-gray-400">
+            Belum ada foto
+          </div>
+        )}
+
         <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/95 text-pink-500 shadow-sm transition group-hover:bg-pink-500 group-hover:text-white">
           <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
         </span>
@@ -232,12 +266,10 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   }
 
   return (
-    // Background Light Pink/Beige
     <div className="w-full min-h-screen bg-[#f8f6f1]">
       <Navbar />
 
       <div className="mx-auto max-w-5xl py-8 px-4 sm:px-6 lg:px-8">
-        {/* Card Putih Container untuk Detail Produk */}
         <div className="rounded-3xl bg-white p-6 shadow-sm border border-gray-100 sm:p-8">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
             
@@ -282,12 +314,10 @@ export default function ItemDetailView({ item, store, related = [], recommended 
                     </span>
                   )}
                   
-                  {/* Harga utama (Rp 0 atau harga normal atau harga diskon) SELALU muncul */}
                   <span className="text-2xl font-black text-pink-600">
                     {formatRupiah(currentPrice)}
                   </span>
                   
-                  {/* Badge persentase diskon */}
                   {hasDiscount && (
                     <span className="mb-1 rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
                       -{discountPercent}%
@@ -316,8 +346,9 @@ export default function ItemDetailView({ item, store, related = [], recommended 
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                <Link href={`/store/${store.owner}`} className="flex min-w-0 flex-1 items-center gap-3">
+              {/* TAMPILAN PROFIL TOKO */}
+              <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-3">
                   {store.profileImage ? (
                     <img src={store.profileImage} alt={store.name} className="h-12 w-12 shrink-0 rounded-full border border-gray-100 object-cover" />
                   ) : (
@@ -326,18 +357,28 @@ export default function ItemDetailView({ item, store, related = [], recommended 
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-bold text-gray-900 hover:underline">{store.name}</p>
-                    <p className="truncate text-xs text-gray-500">{store.type} • {store.distanceLabel}</p>
+                    <p className="truncate text-base font-bold text-gray-900">{store.name}</p>
+                    {store.location && (
+                      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-gray-500">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-pink-500" aria-hidden="true" />
+                        <span className="truncate">{store.location}</span>
+                      </p>
+                    )}
                   </div>
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleWhatsAppConnect}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-105"
-                  style={{ backgroundColor: "#25D366" }}
-                >
-                  <WhatsAppIcon className="h-5 w-5" color="#FFFFFF" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleWhatsAppConnect}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-500 shadow-md transition-transform hover:scale-105 hover:bg-green-600"
+                  >
+                    <WhatsAppIcon className="h-5 w-5" color="#FFFFFF" />
+                  </button>
+                </div>
+                
+                {store.description && (
+                  <p className="mt-2 border-t border-gray-100 pt-3 text-xs leading-5 text-gray-600 whitespace-pre-line">
+                    {store.description}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -389,13 +430,8 @@ export default function ItemDetailView({ item, store, related = [], recommended 
               </div>
             </div>
           ) : (
-            <div className="mt-6 space-y-4 rounded-2xl border border-gray-100 bg-gray-50/50 p-6">
-              <RatingList storeId={store.id} refreshKey={ratingRefreshKey} />
-              {isStoreOwner ? (
-                <p className="text-sm text-gray-400">Ini toko kamu sendiri, jadi nggak bisa dikasih rating.</p>
-              ) : (
-                <RatingForm storeId={store.id} onSubmitted={() => setRatingRefreshKey((k) => k + 1)} />
-              )}
+            <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50/50 p-6">
+              <RatingList storeId={store.id} />
             </div>
           )}
         </div>
@@ -405,9 +441,9 @@ export default function ItemDetailView({ item, store, related = [], recommended 
           {recommended.length > 0 && (
             <div className="mb-10">
               <h2 className="mb-4 text-lg font-bold text-gray-900">Direkomendasikan Untukmu</h2>
-              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {recommended.map((p) => (
-                  <RelatedItemCard key={p.id} item={p} />
+                  <RelatedItemCard key={p.id} item={p as any} />
                 ))}
               </div>
             </div>
@@ -416,9 +452,9 @@ export default function ItemDetailView({ item, store, related = [], recommended 
           {related.length > 0 && (
             <div>
               <h2 className="mb-4 text-lg font-bold text-gray-900">Item Lain dari {store.name}</h2>
-              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {related.map((p) => (
-                  <RelatedItemCard key={p.id} item={p} />
+                  <RelatedItemCard key={p.id} item={p as any} />
                 ))}
               </div>
             </div>

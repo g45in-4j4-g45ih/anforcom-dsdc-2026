@@ -216,19 +216,7 @@ export interface ItemImageResponse {
 export interface ItemApiResponse {
   id: number;
   store: number;
-  store_detail: {
-    id: number;
-    owner: number;
-    nama_toko: string;
-    kontak_wa: string;
-    lokasi: number | null;
-    lokasi_detail: {
-      id: number;
-      nama_lengkap: string;
-      latitude: number | null;
-      longitude: number | null;
-    } | null;
-  } | null;
+  store_detail: StoreDetail | null;
   name: string;
   condition: "layak_makan" | "byproduct";
   listing_type: "diskon" | "donasi" | null;
@@ -245,6 +233,7 @@ export interface ItemApiResponse {
   status: string;
   images: ItemImageResponse[];
   created_at: string;
+  related_items?: ItemListing[];
 }
 
 export async function getItem(id: string | number): Promise<ItemApiResponse | null> {
@@ -452,6 +441,16 @@ export async function markKlaimPaid(klaimId: number, token: string): Promise<Kla
     throw new Error(await parseErrorMessage(res, "Gagal konfirmasi pembayaran."));
   }
   return res.json();
+}
+
+export async function fetchRecommendedItems(): Promise<ItemListing[]> {
+  const res = await fetch(`${API_BASE_URL}/api/items/`, { cache: "no-store" });
+  if (!res.ok) return [];
+  
+  const data = await res.json();
+  const items = Array.isArray(data) ? data : (data.results ?? []);
+  
+  return items.slice(0, 4); 
 }
 
 export interface StoreKlaim extends KlaimResponse {
