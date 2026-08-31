@@ -4,6 +4,7 @@ import { useState } from "react";
 import LocationAutocomplete from "./LocationAutocomplete";
 import AddressForm, { EMPTY_ADDRESS, type AddressValue } from "./AddressForm";
 import TimeDropdown from "./shared/TimeDropdown";
+import { toAbsoluteMediaUrl } from "@/lib/api";
 
 export interface CheckoutOrderItem {
   id: number;
@@ -29,6 +30,9 @@ type PaymentMethod = "transfer" | "qris";
 interface CheckoutPageProps {
   order: CheckoutOrderItem;
   store: CheckoutStoreInfo;
+  storeId: number;
+  selectedItemIds?: number[];
+  directItem?: { itemId: number; quantity: number };
   onConfirm: (payload: {
     deliveryMethod: DeliveryMethod;
     address: string;

@@ -171,36 +171,44 @@ def cart_checkout(request):
     input_serializer = CartCheckoutSerializer(data=request.data)
     input_serializer.is_valid(raise_exception=True)
     data = input_serializer.validated_data
- 
+
     cart_items = list(
-        CartItem.objects.filter(buyer=request.user, item__store_id=data["store_id"])
-        .select_related("item")
+        CartItem.objects.filter(
+            buyer=request.user,
+            item__store_id=data["store_id"],
+            id__in=data["cart_item_ids"],
+        ).select_related("item")
     )
     if not cart_items:
         return Response(
-            {"error": "Nggak ada item di keranjang buat toko ini."},
+            {"error": "Item yang dipilih tidak ditemukan di keranjang."},
             status=status.HTTP_400_BAD_REQUEST,
         )
- 
+    if len(cart_items) != len(data["cart_item_ids"]):
+        return Response(
+            {"error": "Sebagian item yang dipilih tidak valid atau sudah tidak ada."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     created_klaim = []
     shipping_cost = data.get("shipping_cost", 0)
- 
+
     with transaction.atomic():
         for index, cart_entry in enumerate(cart_items):
             item = Item.objects.select_for_update().get(pk=cart_entry.item_id)
- 
+
             try:
                 item.apply_claim(cart_entry.quantity)
             except ValueError as e:
                 transaction.set_rollback(True)
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
- 
+
             is_free = item.listing_type != Item.ListingType.DISKON
             price = item.price_sale if not is_free else None
             subtotal = int(price * cart_entry.quantity) if price else 0
-            this_shipping = shipping_cost if index == 0 else 0  # ongkir cuma sekali
+            this_shipping = shipping_cost if index == 0 else 0
             total_price = subtotal + (0 if is_free else this_shipping)
- 
+
             klaim = Klaim.objects.create(
                 item=item,
                 peminat=request.user,
@@ -215,20 +223,20 @@ def cart_checkout(request):
                 shipping_cost=this_shipping,
                 notes=data.get("notes", ""),
             )
- 
+
             if is_free:
                 klaim.status = Klaim.StatusKlaim.DIBAYAR
                 klaim.paid_at = timezone.now()
                 klaim.save(update_fields=["status", "paid_at"])
- 
+
             created_klaim.append(klaim)
             cart_entry.delete()
- 
+
     return Response(
         KlaimManagementSerializer(created_klaim, many=True).data,
         status=status.HTTP_201_CREATED,
     )
- 
+
 # ==== Checkout ====
 
 @api_view(["POST"])

@@ -1,5 +1,10 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export function toAbsoluteMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
+}
+
 export interface LocationResult {
   display_name: string;
   lat: string;
@@ -82,6 +87,7 @@ export interface StoreDetail {
   lokasi_detail: StoreLocation | null;
   description: string;
   logo: string | null;
+  qris_image: string | null;
 }
 
 export interface ItemImageData {
@@ -105,21 +111,33 @@ export interface ItemListing {
 }
 
 export async function fetchStoreByOwner(userId: number | string): Promise<StoreDetail | null> {
-  const res = await fetch(`${API_BASE_URL}/api/stores/?owner=${userId}`);
+  const res = await fetch(`${API_BASE_URL}/api/stores/?owner=${userId}`, { cache: "no-store" });
   if (!res.ok) return null;
   const data: StoreDetail[] = await res.json();
   return data[0] ?? null;
 }
 
 export async function fetchStoreListings(storeId: number): Promise<ItemListing[]> {
-  const res = await fetch(`${API_BASE_URL}/api/items/?store=${storeId}`);
+  const res = await fetch(`${API_BASE_URL}/api/items/?store=${storeId}`, { cache: "no-store" });
   if (!res.ok) return [];
   return res.json();
 }
 
-export async function fetchListings(listingType: "diskon" | "donasi"): Promise<ItemListing[]> {
-  const res = await fetch(`${API_BASE_URL}/api/items/?listing_type=${listingType}`);
+export async function fetchListings(
+  listingType: "diskon" | "donasi",
+  status?: string
+): Promise<ItemListing[]> {
+  const params = new URLSearchParams({ listing_type: listingType });
+  if (status) params.set("status", status);
+
+  const res = await fetch(`${API_BASE_URL}/api/items/?${params.toString()}`, { cache: "no-store" });
   if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchStoreById(storeId: number): Promise<StoreDetail | null> {
+  const res = await fetch(`${API_BASE_URL}/api/stores/${storeId}/`, { cache: "no-store" });
+  if (!res.ok) return null;
   return res.json();
 }
 

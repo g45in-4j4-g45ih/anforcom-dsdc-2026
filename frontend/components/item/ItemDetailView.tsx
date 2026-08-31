@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Clock3, MapPin, TriangleAlert } from "lucide-react";
@@ -28,6 +28,7 @@ export interface ItemDetailData {
 
 export interface ItemDetailStore {
   id: number;
+  owner: number;
   name: string;
   location?: string; 
   description?: string; 
@@ -219,6 +220,18 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   const [mainIndex, setMainIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
+  const [ratingRefreshKey, setRatingRefreshKey] = useState(0);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setViewerId(localStorage.getItem("auth_user_id"));
+    } catch {
+      setViewerId(null);
+    }
+  }, []);
+
+  const isStoreOwner = viewerId !== null && Number(viewerId) === store.owner;
 
   const currentPrice = item.priceSale !== undefined ? item.priceSale : (item.priceOriginal !== undefined ? item.priceOriginal : 0);
 
@@ -249,7 +262,7 @@ export default function ItemDetailView({ item, store, related = [], recommended 
   }
   
   function handleBuyNow() {
-    console.log("Beli sekarang:", { itemId: item.id, quantity });
+    router.push(`/checkout/${store.id}?itemId=${item.id}&quantity=${quantity}`);
   }
 
   return (
