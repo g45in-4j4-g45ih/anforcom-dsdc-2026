@@ -224,7 +224,7 @@ export interface ItemApiResponse {
     lokasi: number | null;
     lokasi_detail: {
       id: number;
-      nama_lengkap: string;
+      alamat: string;
       latitude: number | null;
       longitude: number | null;
     } | null;
@@ -239,10 +239,12 @@ export interface ItemApiResponse {
   category: string;
   pickup_start: string | null;
   pickup_end: string | null;
+  pickup_date_start: string | null;
+  pickup_date_end: string | null;
   price_original: number | null;
   price_sale: number | null;
   best_before: string | null;
-  status: string;
+  status: "Tersedia" | "Habis" | "Selesai" | "Kadaluarsa";
   images: ItemImageResponse[];
   created_at: string;
 }
