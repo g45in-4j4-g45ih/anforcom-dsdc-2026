@@ -131,7 +131,7 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
             <ClipboardList className="h-4 w-4 text-secondary" aria-hidden="true" />
             Pesanan Masuk
           </h2>
-          <StoreOrdersSection />
+          <StoreOrdersSection onClaimCompleted={load} />
         </div>
       )}
 

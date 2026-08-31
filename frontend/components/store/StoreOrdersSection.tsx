@@ -19,7 +19,13 @@ const STATUS_STYLE: Record<string, string> = {
   Batal: "bg-red-50 text-red-500",
 };
 
-export default function StoreOrdersSection() {
+interface StoreOrdersSectionProps {
+  onClaimCompleted?: () => void | Promise<void>;
+}
+
+export default function StoreOrdersSection({
+  onClaimCompleted,
+}: StoreOrdersSectionProps) {
   const [klaims, setKlaims] = useState<StoreKlaim[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -48,6 +54,7 @@ export default function StoreOrdersSection() {
       const token = localStorage.getItem("auth_token") ?? "";
       const updated = await markKlaimSelesai(klaimId, token);
       setKlaims((current) => current.map((k) => (k.id === klaimId ? updated : k)));
+      await onClaimCompleted?.();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Gagal menandai pesanan selesai.");
     } finally {
