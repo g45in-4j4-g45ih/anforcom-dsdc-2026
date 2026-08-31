@@ -38,7 +38,7 @@ class ImpactAPITests(APITestCase):
             "unit": "kg",
             "description": "Item untuk pengujian impact.",
             "category": "Lainnya",
-            "status": Item.Status.TERSEDIA_SEBAGIAN,
+            "status": Item.Status.TERSEDIA,
         }
         data.update(overrides)
         return Item.objects.create(**data)

@@ -10,10 +10,7 @@ import MaterialsHero from "@/components/materials/MaterialsHero";
 import MaterialsPagination from "@/components/materials/MaterialsPagination";
 import Navbar from "@/components/navigation/Navbar";
 import { getMaterials } from "@/lib/materials-api";
-import type {
-  Material,
-  MaterialStatus,
-} from "@/types/materials";
+import type { Material } from "@/types/materials";
 
 export const dynamic = "force-dynamic";
 const MATERIALS_PER_PAGE = 12;
@@ -26,22 +23,9 @@ const CATEGORY_OPTIONS = [
   "Lainnya",
 ];
 
-const STATUS_OPTIONS: MaterialStatus[] = [
-  "Tersedia",
-  "Tersedia Sebagian",
-];
-
 const CATEGORY_FILTER_OPTIONS = [
   { label: "Semua kategori", value: "" },
   ...CATEGORY_OPTIONS.map((option) => ({
-    label: option,
-    value: option,
-  })),
-];
-
-const STATUS_FILTER_OPTIONS = [
-  { label: "Semua yang tersedia", value: "" },
-  ...STATUS_OPTIONS.map((option) => ({
     label: option,
     value: option,
   })),
@@ -63,20 +47,12 @@ function getPage(value: string) {
   return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
-function isAvailable(material: Material) {
-  return (
-    material.status === "Tersedia" ||
-    material.status === "Tersedia Sebagian"
-  );
-}
-
 export default async function MaterialsPage({
   searchParams,
 }: MaterialsPageProps) {
   const params = await searchParams;
   const search = getParam(params.search).trim();
   const category = getParam(params.category);
-  const status = getParam(params.status) as MaterialStatus | "";
   const requestedPage = getPage(getParam(params.page));
 
   let materials: Material[] = [];
@@ -86,10 +62,10 @@ export default async function MaterialsPage({
     const result = await getMaterials({
       search: search || undefined,
       category: category || undefined,
-      status: status || undefined,
+      status: "Tersedia",
     });
 
-    materials = status ? result : result.filter(isAvailable);
+    materials = result;
   } catch (error) {
     errorMessage =
       error instanceof Error
@@ -119,7 +95,7 @@ export default async function MaterialsPage({
 
         <form
           action="/materials"
-          className="mt-8 grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_220px_220px_auto]"
+          className="mt-8 grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_220px_auto]"
         >
           <label className="relative">
             <span className="sr-only">Cari material</span>
@@ -141,13 +117,6 @@ export default async function MaterialsPage({
             name="category"
             defaultValue={category}
             options={CATEGORY_FILTER_OPTIONS}
-          />
-
-          <FilterDropdown
-            label="Status material"
-            name="status"
-            defaultValue={status}
-            options={STATUS_FILTER_OPTIONS}
           />
 
           <button
@@ -173,7 +142,7 @@ export default async function MaterialsPage({
             )}
           </div>
 
-          {(search || category || status) && (
+          {(search || category) && (
             <a
               href="/materials"
               className="text-sm font-medium text-secondary hover:underline"
@@ -228,7 +197,7 @@ export default async function MaterialsPage({
               totalPages={totalPages}
               search={search}
               category={category}
-              status={status}
+              status=""
             />
           </>
         )}

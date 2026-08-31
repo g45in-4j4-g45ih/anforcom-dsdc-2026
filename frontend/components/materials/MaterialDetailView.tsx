@@ -21,7 +21,6 @@ interface MaterialDetailViewProps {
 
 const STATUS_STYLES: Record<MaterialStatus, string> = {
   Tersedia: "bg-emerald-50 text-emerald-700",
-  "Tersedia Sebagian": "bg-amber-50 text-amber-700",
   Habis: "bg-gray-100 text-gray-600",
   Selesai: "bg-blue-50 text-blue-700",
   Kadaluarsa: "bg-red-50 text-red-700",

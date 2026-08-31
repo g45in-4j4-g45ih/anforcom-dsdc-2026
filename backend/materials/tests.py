@@ -88,7 +88,7 @@ class MaterialReadAPITests(APITestCase):
         matching_material = self.create_item(
             name="Kulit Jeruk",
             category="Kulit Buah",
-            status=Item.Status.TERSEDIA_SEBAGIAN,
+            status=Item.Status.TERSEDIA,
         )
 
         response = self.client.get(
@@ -96,7 +96,7 @@ class MaterialReadAPITests(APITestCase):
             {
                 "search": "jeruk",
                 "category": "Kulit Buah",
-                "status": Item.Status.TERSEDIA_SEBAGIAN,
+                "status": Item.Status.TERSEDIA,
             },
         )
 
@@ -328,7 +328,7 @@ class MaterialReadAPITests(APITestCase):
         self.material.refresh_from_db()
         self.assertEqual(
             self.material.status,
-            Item.Status.TERSEDIA_SEBAGIAN,
+            Item.Status.TERSEDIA,
         )
         self.assertEqual(
             self.material.quantity_remaining,

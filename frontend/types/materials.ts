@@ -1,6 +1,5 @@
 export type MaterialStatus =
   | "Tersedia"
-  | "Tersedia Sebagian"
   | "Habis"
   | "Selesai"
   | "Kadaluarsa";

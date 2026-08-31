@@ -101,7 +101,7 @@ class ItemClaimAPITests(APITestCase):
         )
         self.assertEqual(
             item.status,
-            Item.Status.TERSEDIA_SEBAGIAN,
+            Item.Status.TERSEDIA,
         )
         self.assertEqual(
             claim.jumlah_diklaim,
