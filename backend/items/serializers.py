@@ -50,10 +50,17 @@ class ItemSerializer(serializers.ModelSerializer):
             "id", "store", "store_detail", "name", "condition", "listing_type",
             "quantity_total", "quantity_remaining", "unit", "description", "category",
             "pickup_start", "pickup_end", "pickup_date_start", "pickup_date_end",
-            "price_original", "price_sale", "best_before", "status",
+            "price_original", "price_sale", "best_before", "status", "is_reported",
             "images", "uploaded_images", "created_at",
         ]
-        read_only_fields = ["id", "store", "quantity_remaining", "status", "created_at"]
+        read_only_fields = [
+            "id",
+            "store",
+            "quantity_remaining",
+            "status",
+            "is_reported",
+            "created_at",
+        ]
 
     def validate(self, data):
         condition = data.get("condition")

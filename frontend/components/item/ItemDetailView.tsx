@@ -3,12 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Clock3, MapPin, TriangleAlert } from "lucide-react";
+import {
+  ArrowUpRight,
+  Clock3,
+  Flag,
+  MapPin,
+  TriangleAlert,
+} from "lucide-react";
 
 import Navbar from "@/components/navigation/Navbar";
 import RatingList from "../rating/RatingList";
 import RatingForm from "../rating/RatingForm";
-import { addToCart } from "@/lib/api";
+import { addToCart, reportItem } from "@/lib/api";
 import { toast } from "sonner";
 
 export interface ItemDetailData {
@@ -16,6 +22,7 @@ export interface ItemDetailData {
   name: string;
   condition: "layak_makan" | "byproduct";
   status: "Tersedia" | "Habis" | "Selesai" | "Kadaluarsa";
+  isReported: boolean;
   images: string[];
   badgeLabel: string;
   priceOriginal?: number;
@@ -226,6 +233,10 @@ export default function ItemDetailView({
     useState(0);
   const [viewerId, setViewerId] =
     useState<string | null>(null);
+  const [reportSubmitted, setReportSubmitted] =
+    useState(item.isReported);
+  const [isReporting, setIsReporting] =
+    useState(false);
 
   useEffect(() => {
     try {
@@ -283,6 +294,49 @@ export default function ItemDetailView({
       toast.success("Berhasil ditambahkan ke keranjang!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menambah ke keranjang.");
+    }
+  }
+
+  async function handleReport() {
+    if (isStoreOwner) {
+      toast.error(
+        "Kamu tidak dapat melaporkan item milik sendiri.",
+      );
+      return;
+    }
+
+    if (reportSubmitted || isReporting) {
+      return;
+    }
+
+    const token =
+      localStorage.getItem("auth_token") ?? "";
+
+    if (!token) {
+      router.push(
+        `/login?next=${encodeURIComponent(
+          `/items/${item.id}`,
+        )}`,
+      );
+      return;
+    }
+
+    setIsReporting(true);
+
+    try {
+      await reportItem(item.id, token);
+      setReportSubmitted(true);
+      toast.success(
+        "Laporan berhasil dikirim untuk ditinjau.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Laporan belum dapat dikirim.",
+      );
+    } finally {
+      setIsReporting(false);
     }
   }
 
@@ -468,6 +522,33 @@ export default function ItemDetailView({
                       ? "Klaim via Keranjang"
                       : "Tambahkan ke Keranjang"
                     : "Tidak Dapat Diklaim"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReport}
+                  disabled={
+                    reportSubmitted ||
+                    isReporting ||
+                    isStoreOwner
+                  }
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 py-2.5 text-sm font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  <Flag
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
+                  {isStoreOwner
+                    ? isByproduct
+                      ? "Material Milikmu"
+                      : "Item Milikmu"
+                    : reportSubmitted
+                      ? "Sudah Dilaporkan"
+                      : isReporting
+                        ? "Mengirim laporan..."
+                        : isByproduct
+                          ? "Laporkan Material"
+                          : "Laporkan Item"}
                 </button>
               </div>
             </div>

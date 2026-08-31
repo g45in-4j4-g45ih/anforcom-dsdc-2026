@@ -37,6 +37,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     name: item.name,
     condition: item.condition,
     status: item.status,
+    isReported: item.is_reported,
     images: item.images.map((img) =>
       toAbsoluteUrl(img.image),
     ),

@@ -245,6 +245,7 @@ export interface ItemApiResponse {
   price_sale: number | null;
   best_before: string | null;
   status: "Tersedia" | "Habis" | "Selesai" | "Kadaluarsa";
+  is_reported: boolean;
   images: ItemImageResponse[];
   created_at: string;
 }
@@ -252,6 +253,37 @@ export interface ItemApiResponse {
 export async function getItem(id: string | number): Promise<ItemApiResponse | null> {
   const res = await fetch(`${API_BASE_URL}/api/items/${id}/`, { cache: "no-store" });
   if (!res.ok) return null;
+  return res.json();
+}
+
+export interface ReportItemResponse {
+  message: string;
+  is_reported: boolean;
+}
+
+export async function reportItem(
+  itemId: number,
+  token: string,
+): Promise<ReportItemResponse> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/items/${itemId}/report/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(
+      await parseErrorMessage(
+        res,
+        "Gagal melaporkan item.",
+      ),
+    );
+  }
+
   return res.json();
 }
 

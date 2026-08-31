@@ -14,12 +14,14 @@ from .views import (
     cart_checkout,
     checkout_item,
     mark_klaim_paid,
+    report_item,
     tandai_selesai,
 )
 
 urlpatterns = [
     path("items/", ItemListCreateView.as_view(), name="item-list-create"),
     path("items/<int:pk>/", ItemDetailView.as_view(), name="item-detail"),
+    path("items/<int:pk>/report/", report_item, name="item-report"),
     path("items/<int:pk>/checkout/", checkout_item, name="item-checkout"),
 
     path("cart/", CartListView.as_view(), name="cart-list"),

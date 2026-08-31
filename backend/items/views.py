@@ -97,6 +97,42 @@ class ItemDetailView(generics.RetrieveUpdateAPIView):
             return Item.objects.filter(store=self.request.user.store)
         return Item.objects.none()
 
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def report_item(request, pk):
+    item = generics.get_object_or_404(Item, pk=pk)
+
+    if item.store.owner_id == request.user.id:
+        return Response(
+            {
+                "error": (
+                    "Kamu tidak dapat melaporkan item "
+                    "milik sendiri."
+                )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if item.is_reported:
+        return Response(
+            {
+                "message": "Item sudah pernah dilaporkan.",
+                "is_reported": True,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    item.is_reported = True
+    item.save(update_fields=["is_reported", "updated_at"])
+
+    return Response(
+        {
+            "message": "Item berhasil dilaporkan.",
+            "is_reported": True,
+        },
+        status=status.HTTP_200_OK,
+    )
+
 # ===== Cart =====
  
 class CartListView(generics.ListAPIView):

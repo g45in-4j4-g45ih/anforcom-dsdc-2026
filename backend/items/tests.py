@@ -260,6 +260,70 @@ class ItemClaimAPITests(APITestCase):
                     claim_status,
                 )
 
+    def test_item_detail_exposes_report_status(self):
+        item = self.create_item()
+
+        response = self.client.get(
+            reverse("item-detail", kwargs={"pk": item.pk})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["is_reported"])
+
+    def test_report_item_requires_authentication(self):
+        item = self.create_item()
+
+        response = self.client.post(
+            reverse("item-report", kwargs={"pk": item.pk})
+        )
+
+        self.assertIn(
+            response.status_code,
+            [
+                status.HTTP_401_UNAUTHORIZED,
+                status.HTTP_403_FORBIDDEN,
+            ],
+        )
+        item.refresh_from_db()
+        self.assertFalse(item.is_reported)
+
+    def test_user_can_report_item_idempotently(self):
+        item = self.create_item()
+        self.client.force_authenticate(user=self.other_user)
+        report_url = reverse(
+            "item-report",
+            kwargs={"pk": item.pk},
+        )
+
+        first_response = self.client.post(report_url)
+        second_response = self.client.post(report_url)
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        item.refresh_from_db()
+        self.assertTrue(item.is_reported)
+
+    def test_owner_cannot_report_own_item(self):
+        item = self.create_item()
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.post(
+            reverse("item-report", kwargs={"pk": item.pk})
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        item.refresh_from_db()
+        self.assertFalse(item.is_reported)
 
 class StoreAPITests(APITestCase):
     def setUp(self):
