@@ -59,7 +59,7 @@ export default function MaterialCard({
 
   return (
     <Link
-      href={`/materials/${material.id}`}
+      href={`/items/${material.id}`}
       aria-label={`Lihat detail ${material.name}`}
       className="group min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-secondary-light hover:shadow-lg"
     >
