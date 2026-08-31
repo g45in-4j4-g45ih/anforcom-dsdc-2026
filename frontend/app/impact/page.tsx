@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "@/components/navigation/Navbar";
 import StatCard from "@/components/impact/StatCard";
 import RescuePathGrid from "@/components/impact/RescuePathGrid";
+import ImpactPathChart from "@/components/impact/ImpactPathChart";
 import CategoryTable from "@/components/impact/CategoryTable";
 import { formatCompactNumber } from "@/lib/format-number";
 import { getImpactDashboard, ImpactApiError } from "@/lib/impact-api";
@@ -76,6 +77,9 @@ export default async function ImpactPage() {
 
             <h2 className="mb-3 mt-8 text-sm font-semibold text-gray-900">Berdasarkan Jalur</h2>
             <RescuePathGrid byPath={summary.by_path} />
+            <div className="mt-4">
+              <ImpactPathChart byPath={summary.by_path} />
+            </div>
 
             <h2 className="mb-3 mt-8 text-sm font-semibold text-gray-900">Berdasarkan Kategori</h2>
             <CategoryTable categories={summary.by_category} />

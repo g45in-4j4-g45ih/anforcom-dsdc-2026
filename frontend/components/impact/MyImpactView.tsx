@@ -7,6 +7,7 @@ import { Package, Sprout, TriangleAlert } from "lucide-react";
 import FilterDropdown from "@/components/materials/FilterDropdown";
 import StatCard from "./StatCard";
 import RescuePathGrid from "./RescuePathGrid";
+import ImpactPathChart from "./ImpactPathChart";
 import RoleSummaryGrid from "./RoleSummaryGrid";
 import ImpactHistoryList from "./ImpactHistoryList";
 import { formatCompactNumber } from "@/lib/format-number";
@@ -146,6 +147,8 @@ export default function MyImpactView() {
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Berdasarkan Jalur</h2>
         <RescuePathGrid byPath={summary.by_path} />
       </div>
+
+      <ImpactPathChart byPath={summary.by_path} />
 
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
