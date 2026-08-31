@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ClipboardList, MapPin, MessageSquareText, PackageOpen, Pencil, TriangleAlert } from "lucide-react";
+import {
+  ClipboardList,
+  MapPin,
+  MessageSquareText,
+  PackageOpen,
+  Pencil,
+  Plus,
+  TriangleAlert,
+} from "lucide-react";
 import {
   fetchStoreByOwner,
   fetchStoreListings,
@@ -133,8 +141,22 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
         </p>
       )}
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">Listing</h2>
+      <div id={isOwner ? "listing-management" : undefined}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-gray-900">
+            {isOwner ? "Kelola Listing" : "Listing"}
+          </h2>
+
+          {isOwner && (
+            <Link
+              href="/post-item"
+              className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Tambah Listing
+            </Link>
+          )}
+        </div>
         {listings.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
             <PackageOpen className="mx-auto h-8 w-8 text-gray-400" aria-hidden="true" />
@@ -143,7 +165,11 @@ export default function StoreProfile({ userId }: StoreProfileProps) {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             {listings.map((item) => (
-              <ListingCard key={item.id} item={item} />
+              <ListingCard
+                key={item.id}
+                item={item}
+                managementMode={isOwner}
+              />
             ))}
           </div>
         )}

@@ -6,9 +6,17 @@ import { toWaLink } from "@/lib/whatsapp";
 
 interface ListingCardProps {
   item: ItemListing;
+  managementMode?: boolean;
 }
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+
+const STATUS_STYLE: Record<string, string> = {
+  Tersedia: "bg-emerald-50 text-emerald-700",
+  Habis: "bg-gray-100 text-gray-600",
+  Selesai: "bg-blue-50 text-blue-700",
+  Kadaluarsa: "bg-red-50 text-red-700",
+};
 
 function formatQuantity(value: string) {
   const quantity = Number(value);
@@ -16,7 +24,10 @@ function formatQuantity(value: string) {
   return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(quantity);
 }
 
-export default function ListingCard({ item }: ListingCardProps) {
+export default function ListingCard({
+  item,
+  managementMode = false,
+}: ListingCardProps) {
   const thumbnail = item.images[0]?.image;
   const isDonasi = item.listing_type === "donasi";
   const waLink = toWaLink(
@@ -29,6 +40,16 @@ export default function ListingCard({ item }: ListingCardProps) {
       <Link href={`/items/${item.id}`} aria-label={`Lihat detail ${item.name}`} className="block">
         <div className="relative aspect-[16/10] overflow-hidden bg-gray-50">
           <MaterialImage src={thumbnail} alt={item.name} />
+
+          {managementMode && (
+            <span
+              className={`absolute left-2 top-2 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                STATUS_STYLE[item.status] ?? "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {item.status}
+            </span>
+          )}
 
           <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/95 text-primary shadow-sm transition group-hover:bg-primary group-hover:text-white">
             <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -78,7 +99,7 @@ export default function ListingCard({ item }: ListingCardProps) {
         </div>
       </Link>
 
-      {item.store_detail && (
+      {!managementMode && item.store_detail && (
         <div className="px-3 sm:px-4">
           <Link
             href={`/store/${item.store_detail.owner}`}
@@ -90,7 +111,7 @@ export default function ListingCard({ item }: ListingCardProps) {
         </div>
       )}
 
-      {waLink && (
+      {!managementMode && waLink && (
         <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
           <a
             href={waLink}
