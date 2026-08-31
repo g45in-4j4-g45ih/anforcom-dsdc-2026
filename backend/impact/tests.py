@@ -121,7 +121,7 @@ class ImpactAPITests(APITestCase):
         self.create_claim(
             ignored_item,
             "100.00",
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
         )
         self.create_claim(
             ignored_item,
@@ -266,7 +266,7 @@ class ImpactAPITests(APITestCase):
         self.create_claim(
             poster_item,
             "100.00",
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
         )
 
         self.client.force_authenticate(user=self.owner)
@@ -346,7 +346,7 @@ class ImpactAPITests(APITestCase):
         self.create_claim(
             poster_item,
             "100.00",
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.MENUNGGU_PEMBAYARAN,
         )
 
         self.client.force_authenticate(user=self.owner)

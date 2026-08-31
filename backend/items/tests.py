@@ -83,13 +83,17 @@ class ItemClaimAPITests(APITestCase):
                 "item-checkout",
                 kwargs={"pk": item.pk},
             ),
-            {"jumlah": "2.50"},
+            {
+                "jumlah": "2.50",
+                "pickup_method": Klaim.PickupMethod.SELF_PICKUP,
+                "pickup_time": "10:00",
+            },
             format="json",
         )
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_200_OK,
+            status.HTTP_201_CREATED,
         )
 
         item.refresh_from_db()
@@ -109,7 +113,7 @@ class ItemClaimAPITests(APITestCase):
         )
         self.assertEqual(
             claim.status,
-            Klaim.StatusKlaim.MENUNGGU,
+            Klaim.StatusKlaim.DIBAYAR,
         )
 
     def test_invalid_claim_quantities_are_rejected(self):
