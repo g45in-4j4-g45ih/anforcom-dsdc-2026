@@ -25,6 +25,9 @@ export default function MyImpactView() {
   const [summary, setSummary] = useState<MyImpactSummary | null>(null);
   const [history, setHistory] = useState<ImpactHistoryEntry[]>([]);
   const [pathFilter, setPathFilter] = useState<RescuePath | "">("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -43,7 +46,15 @@ export default function MyImpactView() {
     try {
       const [summaryData, historyData] = await Promise.all([
         getMyImpact(token),
-        getImpactHistory(pathFilter ? { path: pathFilter } : {}, token),
+        getImpactHistory(
+          {
+            path: pathFilter || undefined,
+            category: categoryFilter || undefined,
+            start_date: startDateFilter || undefined,
+            end_date: endDateFilter || undefined,
+          },
+          token,
+        ),
       ]);
       setSummary(summaryData);
       setHistory(historyData.results);
@@ -54,7 +65,13 @@ export default function MyImpactView() {
     } finally {
       setIsLoading(false);
     }
-  }, [token, pathFilter]);
+  }, [
+    token,
+    pathFilter,
+    categoryFilter,
+    startDateFilter,
+    endDateFilter,
+  ]);
 
   useEffect(() => {
     if (token) load();
@@ -92,6 +109,14 @@ export default function MyImpactView() {
 
   if (!summary) return null;
 
+  const categoryFilterOptions = [
+    { label: "Semua kategori", value: "" },
+    ...summary.by_category.map(({ category }) => ({
+      label: category,
+      value: category,
+    })),
+  ];
+
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -124,16 +149,77 @@ export default function MyImpactView() {
 
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-gray-900">Riwayat Transaksi</h2>
-          <div className="w-48">
-            <FilterDropdown
-              label="Filter jalur"
-              name="path"
-              defaultValue={pathFilter}
-              options={PATH_FILTER_OPTIONS}
-              onChange={(value) => setPathFilter(value as RescuePath | "")}
+          <h2 className="text-sm font-semibold text-gray-900">
+            Riwayat Transaksi
+          </h2>
+
+          {(pathFilter ||
+            categoryFilter ||
+            startDateFilter ||
+            endDateFilter) && (
+            <button
+              type="button"
+              onClick={() => {
+                setPathFilter("");
+                setCategoryFilter("");
+                setStartDateFilter("");
+                setEndDateFilter("");
+              }}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              Hapus filter
+            </button>
+          )}
+        </div>
+
+        <div className="mb-4 grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+          <FilterDropdown
+            label="Filter jalur"
+            name="path"
+            defaultValue={pathFilter}
+            options={PATH_FILTER_OPTIONS}
+            onChange={(value) =>
+              setPathFilter(value as RescuePath | "")
+            }
+          />
+
+          <FilterDropdown
+            label="Filter kategori"
+            name="category"
+            defaultValue={categoryFilter}
+            options={categoryFilterOptions}
+            onChange={setCategoryFilter}
+          />
+
+          <label className="min-w-0">
+            <span className="mb-1 block text-xs font-medium text-gray-600">
+              Dari tanggal
+            </span>
+            <input
+              type="date"
+              value={startDateFilter}
+              max={endDateFilter || undefined}
+              onChange={(event) =>
+                setStartDateFilter(event.target.value)
+              }
+              className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-light/30"
             />
-          </div>
+          </label>
+
+          <label className="min-w-0">
+            <span className="mb-1 block text-xs font-medium text-gray-600">
+              Sampai tanggal
+            </span>
+            <input
+              type="date"
+              value={endDateFilter}
+              min={startDateFilter || undefined}
+              onChange={(event) =>
+                setEndDateFilter(event.target.value)
+              }
+              className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-light/30"
+            />
+          </label>
         </div>
         <ImpactHistoryList entries={history} />
       </div>
